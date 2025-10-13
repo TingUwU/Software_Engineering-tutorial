@@ -47,16 +47,25 @@
           <div class="row two">
             <div>
               <label>星期</label>
-              <input v-model="bh.day" placeholder="e.g. Mon-Fri" />
+              <select v-model="bh.day">
+                <option disabled value="">請選擇</option>
+                <option v-for="d in WEEKDAYS" :key="d" :value="d">{{ d }}</option>
+              </select>
             </div>
             <div>
-              <label>時間</label>
-              <input v-model="bh.time" placeholder="e.g. 09:00-18:00" />
+              <label>開始時間</label>
+              <input v-model="bh.start" type="time" min="00:00" max="23:59" step="60" />
             </div>
           </div>
-          <div class="row">
-            <label>備註/公休</label>
-            <input v-model="bh.close" placeholder="e.g. Closed on Sun" />
+          <div class="row two">
+            <div>
+              <label>結束時間</label>
+              <input v-model="bh.end" type="time" min="00:00" max="23:59" step="60" />
+            </div>
+            <div>
+              <label>備註/公休</label>
+              <input v-model="bh.note" placeholder="e.g. 例：中午休息 12:00-13:00 / 週日公休" />
+            </div>
           </div>
           <button type="button" class="danger" @click="vm.removeBusinessHour(i)">刪除此時段</button>
         </div>
@@ -90,6 +99,7 @@
 import useStoreSettingViewModel from '../viewmodels/storeSettingViewModel.js';
 
 const vm = useStoreSettingViewModel();
+const WEEKDAYS = ['星期一','星期二','星期三','星期四','星期五','星期六','星期日'];
 
 async function onSubmit() {
   const ok = await vm.submitForm();
