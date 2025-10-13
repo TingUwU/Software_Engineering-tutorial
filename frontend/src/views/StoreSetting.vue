@@ -44,7 +44,7 @@
       <section>
         <h2>營業時間</h2>
         <div v-for="(bh, i) in vm.store.businessHours" :key="i" class="card">
-          <div class="row two">
+          <div class="row three">
             <div>
               <label>星期</label>
               <select v-model="bh.day">
@@ -56,25 +56,27 @@
               <label>開始時間</label>
               <input v-model="bh.start" type="time" min="00:00" max="23:59" step="60" />
             </div>
-          </div>
-          <div class="row two">
             <div>
               <label>結束時間</label>
               <input v-model="bh.end" type="time" min="00:00" max="23:59" step="60" />
             </div>
+          </div>
+          <div class="row note-row">
             <div>
               <label>備註/公休</label>
-              <input v-model="bh.note" placeholder="e.g. 例：中午休息 12:00-13:00 / 週日公休" />
+              <input v-model="bh.note" placeholder="例：中午休息 12:00-13:00 / 週日公休" />
+            </div>
+            <div class="actions-right">
+              <button type="button" class="danger" @click="vm.removeBusinessHour(i)">刪除此時段</button>
             </div>
           </div>
-          <button type="button" class="danger" @click="vm.removeBusinessHour(i)">刪除此時段</button>
         </div>
         <button type="button" @click="vm.addBusinessHour()">新增營業時間</button>
       </section>
 
       <section>
         <h2>狀態</h2>
-        <div class="row">
+        <div class="row inline">
           <label>是否啟用</label>
           <input v-model="vm.store.isActive" type="checkbox" />
         </div>
@@ -116,12 +118,20 @@ h1 { margin: 16px 0 24px; }
 h2 { margin: 24px 0 8px; font-size: 18px; }
 .form { display: grid; gap: 16px; }
 .row { display: grid; gap: 8px; margin-bottom: 8px; }
-.row.two { grid-template-columns: 1fr 1fr; gap: 12px; }
+.row.two { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.row.three { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+.row.inline { grid-template-columns: auto auto; align-items: center; gap: 12px; }
+.row.note-row { grid-template-columns: 1fr auto; align-items: end; }
 .card { border: 1px solid #ddd; padding: 12px; border-radius: 6px; margin-bottom: 12px; }
 input[type="text"], input[type="tel"], input[type="email"], input[type="number"], textarea {
   padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px; width: 100%;
 }
+select, input[type="time"] {
+  padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px; width: 100%;
+  background: #fff;
+}
 .actions { display: flex; gap: 8px; }
+.actions-right { display: flex; justify-content: flex-end; align-items: flex-end; }
 button { padding: 6px 12px; cursor: pointer; }
 button.secondary { background: #f2f2f2; }
 button.danger { background: #ffe8e8; border: 1px solid #ffb3b3; }
