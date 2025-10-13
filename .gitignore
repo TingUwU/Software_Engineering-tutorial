@@ -1,4 +1,4 @@
-docker-compose.yml
-frontend/.dockerignore
-frontend/Dockerfile
-frontend/nginx.conf
+# docker-compose.yml
+# frontend/.dockerignore
+# frontend/Dockerfile
+# frontend/nginx.conf
