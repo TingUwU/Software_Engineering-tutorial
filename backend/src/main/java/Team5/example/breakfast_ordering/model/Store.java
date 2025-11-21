@@ -17,11 +17,12 @@ public class Store {
     private List<BusinessHour> businessHours;
     private boolean isActive;
     private String updatedAt;
+    private String ownerId;
 
     // Getters and Setters
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
-    
+
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
 
@@ -48,6 +49,9 @@ public class Store {
 
     public String getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(String updatedAt) { this.updatedAt = updatedAt; }
+
+    public String getOwnerId() { return ownerId; }
+    public void setOwnerId(String ownerId) { this.ownerId = ownerId; }
 
     // Inner class for BusinessHour
     public static class BusinessHour {
