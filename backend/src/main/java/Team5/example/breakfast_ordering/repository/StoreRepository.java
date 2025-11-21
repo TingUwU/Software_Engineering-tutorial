@@ -6,6 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface StoreRepository extends MongoRepository<Store, String> {
-    // 可以在這裡定義自定義查詢，例如 findByName
     Store findByOwnerId(String ownerId);
 }
