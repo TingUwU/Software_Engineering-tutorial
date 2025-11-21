@@ -23,6 +23,9 @@ public class Customer {
     // default: ""
     private String nickname = ""; // 使用者名稱 
 
+    // required: true, enum: ['owner', 'buyer', 'admin']
+    private String role; // 角色
+
     // default: ""
     private String photo = ""; // 大頭貼 
 
@@ -89,6 +92,14 @@ public class Customer {
 
     public void setNickname(String nickname) {
         this.nickname = nickname;
+    }
+
+    public String getRole() {
+        return role;
+    }
+
+    public void setRole(String role) {
+        this.role = role;
     }
 
     public String getPhoto() {
