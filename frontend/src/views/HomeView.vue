@@ -11,7 +11,7 @@
             </div>
             <ul>
                 <li @click="openUserModal">使用者資訊</li>
-                <li>購物車</li>
+                <router-link to="/cart"><li>購物車</li></router-link>
                 <li>訂單管理</li>
                 <li>歷史</li>
                 <li>收藏</li>
@@ -24,8 +24,7 @@
         <!-- LOGO + 系統名稱 -->
         <header class="header">
             <div class="logo-container">
-                <img class="logo-img" src="@/assets/logo.png" alt="logo">
-                <h1 class="logo">北寧路早餐店點餐系統</h1>
+                <h1 class="logo">店家一覽</h1>
             </div>
         </header>
 
@@ -40,41 +39,53 @@
             </button>
         </div>
 
-        <!-- 中式 -->
+        <!-- 中式店家 -->
         <section class="category-section">
             <h2 class="category-title">中式</h2>
             <div class="slider-container">
                 <button class="scroll-btn left" @click="scrollLeft('chinese')">&#8249;</button>
                 <div ref="chineseSlider" class="slider">
-                    <div v-for="shop in chineseShops" :key="shop._id" class="shop-card">
+                    <router-link v-for="shop in chineseShops"
+                                 :key="shop._id"
+                                 :to="{ name: 'ShopView', params: { id: shop._id } }"
+                                 class="shop-card">
                         <img :src="shop.menu[0]?.imgUrl || require('@/assets/logo.png')" class="shop-img" alt="店家圖片">
                         <p class="shop-name">{{ shop.name }}</p>
-                    </div>
+                    </router-link>
                 </div>
                 <button class="scroll-btn right" @click="scrollRight('chinese')">&#8250;</button>
             </div>
         </section>
 
-        <!-- 西式 -->
+        <!-- 西式店家 -->
         <section class="category-section">
             <h2 class="category-title">西式</h2>
             <div class="slider-container">
                 <button class="scroll-btn left" @click="scrollLeft('western')">&#8249;</button>
                 <div ref="westernSlider" class="slider">
-                    <div v-for="shop in westernShops" :key="shop._id" class="shop-card">
+                    <router-link v-for="shop in westernShops"
+                                 :key="shop._id"
+                                 :to="{ name: 'ShopView', params: { id: shop._id } }"
+                                 class="shop-card">
                         <img :src="shop.menu[0]?.imgUrl || require('@/assets/logo.png')" class="shop-img" alt="店家圖片">
                         <p class="shop-name">{{ shop.name }}</p>
-                    </div>
+                    </router-link>
                 </div>
                 <button class="scroll-btn right" @click="scrollRight('western')">&#8250;</button>
             </div>
         </section>
+
 
         <!-- 使用者資訊 Modal -->
         <div v-if="userModalOpen" class="modal-overlay" @click.self="closeUserModal">
             <div class="user-modal">
                 <h3>使用者資訊</h3>
                 <form @submit.prevent="updateUser">
+                    <div class="form-group">
+                        <label>頭像:</label>
+                        <img :src="editCustomer.photo || require('@/assets/logo.png')" class="preview-avatar" alt="user">
+                        <input type="file" @change="onAvatarChange" accept="image/*">
+                    </div>
                     <div class="form-group">
                         <label>名稱:</label>
                         <input type="text" v-model="editCustomer.nickname">
@@ -94,6 +105,16 @@
                 </form>
             </div>
         </div>
+
+        <!-- 右下角購物車快捷 -->
+        <router-link to="/cart" class="cart-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="24" height="24">
+                <circle cx="9" cy="21" r="1" />
+                <circle cx="20" cy="21" r="1" />
+                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+            </svg>
+        </router-link>
+
     </div>
 </template>
 
@@ -115,7 +136,9 @@
                     favorItems: [],
                     customCombos: []
                 },
-                editCustomer: {},
+                editCustomer: {
+                    photo: ""
+                },
                 chineseShops: [
                     { _id: 'c1', name: "小王豆漿", menu: [] },
                     { _id: 'c2', name: "阿婆飯糰", menu: [] },
@@ -153,6 +176,16 @@
             scrollRight(type) {
                 const slider = type === 'chinese' ? this.$refs.chineseSlider : this.$refs.westernSlider;
                 slider.scrollBy({ left: 200, behavior: 'smooth' });
+            },
+            onAvatarChange(event) {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = e => {
+                        this.editCustomer.photo = e.target.result; // base64 字串
+                    };
+                    reader.readAsDataURL(file);
+                }
             }
         }
     };
@@ -255,6 +288,14 @@
         border-radius: 50%;
         cursor: pointer;
         z-index: 101;
+    }
+    .preview-avatar {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        object-fit: cover;
+        display: block;
+        margin-bottom: 8px;
     }
 
     /* LOGO + 系統名稱 */
@@ -390,6 +431,7 @@
         text-align: center;
         padding-bottom: 10px;
         transition: transform 0.3s;
+        text-decoration: none;
     }
 
         .shop-card:hover {
@@ -406,7 +448,10 @@
     .shop-name {
         margin-top: 8px;
         font-weight: bold;
+        color: #000; /* 黑色文字 */
+        text-decoration: none; /* 去掉底線 */
     }
+
 
     /* Modal */
     .modal-overlay {
@@ -477,4 +522,27 @@
                 background-color: #ccc;
                 color: #333;
             }
+
+    /* 右下角購物車圖示 */
+    .cart-btn {
+        position: fixed;
+        right: 20px;
+        bottom: 20px;
+        width: 56px;
+        height: 56px;
+        background-color: #0069D9;
+        border-radius: 50%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 150;
+        cursor: pointer;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+
+        .cart-btn svg {
+            stroke: white;
+            width: 28px;
+            height: 28px;
+        }
 </style>
