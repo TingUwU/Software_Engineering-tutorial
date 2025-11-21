@@ -1,0 +1,5 @@
+# docker-compose.yml
+# frontend/.dockerignore
+# frontend/Dockerfile
+# frontend/nginx.conf
+*.env

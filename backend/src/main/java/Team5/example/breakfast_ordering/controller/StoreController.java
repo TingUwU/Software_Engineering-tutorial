@@ -3,27 +3,38 @@ package Team5.example.breakfast_ordering.controller;
 import Team5.example.breakfast_ordering.model.Store;
 import Team5.example.breakfast_ordering.service.StoreService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.http.HttpStatus;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/stores") // 設定這家店的「總機號碼」
-@CrossOrigin(origins = "*") // 允許前端 (Vue) 跨網域呼叫，這很重要！
+@RequestMapping("/api/stores")
+@CrossOrigin(origins = "http://localhost:8080")
 public class StoreController {
 
     @Autowired
     private StoreService storeService;
 
-    // API 1: 新增店家 (POST /api/stores)
+    // 創建新店家
     @PostMapping
-    public Store createStore(@RequestBody Store store) {
-        return storeService.createStore(store);
+    public ResponseEntity<Store> createStore(
+            @RequestBody Store store,
+            @RequestHeader(value = "Authorization", required = false) String authorization
+    ) {
+        String userId = storeService.parseUserIdFromAuthorization(authorization);
+        if (userId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        Store createdStore = storeService.createStore(store, userId);
+        return ResponseEntity.ok(createdStore);
     }
 
-    // API 2: 取得所有店家 (GET /api/stores)
+    // 獲取所有店家
     @GetMapping
-    public List<Store> getAllStores() {
-        return storeService.getAllStores();
+    public ResponseEntity<List<Store>> getAllStores() {
+        return ResponseEntity.ok(storeService.getAllStores());
     }
+
 }
