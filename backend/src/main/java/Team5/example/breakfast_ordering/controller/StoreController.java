@@ -10,7 +10,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/stores")
-@CrossOrigin(origins = "http://localhost:8080") // 允許前端 Vue 開發伺服器存取
+@CrossOrigin(origins = "http://localhost:8080")
 public class StoreController {
 
     @Autowired
