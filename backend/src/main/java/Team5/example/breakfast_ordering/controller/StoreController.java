@@ -1,29 +1,41 @@
 package Team5.example.breakfast_ordering.controller;
 
-import Team5.example.breakfast_ordering.model.Store;
-import Team5.example.breakfast_ordering.service.StoreService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
+import java.util.ArrayList;
+import java.util.stream.Collectors;
+
+import Team5.example.breakfast_ordering.model.Store;
+import Team5.example.breakfast_ordering.repository.StoreRepository;
 
 @RestController
-@RequestMapping("/api/stores") // 設定這家店的「總機號碼」
-@CrossOrigin(origins = "*") // 允許前端 (Vue) 跨網域呼叫，這很重要！
+@RequestMapping("/api/store-page")
 public class StoreController {
-
     @Autowired
-    private StoreService storeService;
+    private StoreRepository storeRepository;
 
-    // API 1: 新增店家 (POST /api/stores)
-    @PostMapping
-    public Store createStore(@RequestBody Store store) {
-        return storeService.createStore(store);
+    // 回傳 ID 為 storeId 的店家
+    @GetMapping("/{storeId}")
+    public Store getStoreDetails(@PathVariable String storeId){
+        Store store = storeRepository.findById(storeId)
+        .orElseThrow(() -> new RuntimeException("找不到該店家 ID: " + storeId));
+
+        return store;
     }
 
-    // API 2: 取得所有店家 (GET /api/stores)
-    @GetMapping
-    public List<Store> getAllStores() {
-        return storeService.getAllStores();
+    // 回傳在 ID 為 storeId 的店家中、名字包含 keyword 的商品
+    @GetMapping("/{storeId}/search-product")
+    public List<Store.MenuItem> searchProductInStore(@PathVariable String storeId, @PathVariable String keyword){
+        Store store = storeRepository.findById(storeId).
+        orElseThrow( () -> new RuntimeException("找不到該店家 ID: " + storeId));
+
+        if(store.getMenu() == null){
+            return new ArrayList<>();
+        }
+
+        return store.getMenu().stream()
+               .filter(item -> item.getItemName() != null && item.getItemName().contains(keyword))
+               .collect(Collectors.toList());
     }
 }
