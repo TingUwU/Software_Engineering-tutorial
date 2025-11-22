@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.util.List;
+import org.bson.types.ObjectId;
 
 @Service
 public class StoreService {
@@ -36,5 +37,22 @@ public class StoreService {
         if (token.isEmpty()) return null;
         if (token.startsWith("uid:")) return token.substring(4);
         return token;
+    }
+
+    // 更新店家菜單
+    public Store updateMenu(String storeId, List<Store.MenuItem> menu, String userId) {
+        Store store = storeRepository.findById(storeId).orElse(null);
+        if (store == null) throw new IllegalArgumentException("STORE_NOT_FOUND");
+        if (userId == null || !userId.equals(store.getOwnerId())) throw new SecurityException("FORBIDDEN");
+        if (menu != null) {  // null 時，不修改菜單
+            for (Store.MenuItem mi : menu) {  // 為每個還不存在的菜單項目生成 ID
+                if (mi.getId() == null || mi.getId().isBlank()) {
+                    mi.setId(new ObjectId().toString());
+                }
+            }
+        }
+        store.setMenu(menu);
+        store.setUpdatedAt(Instant.now().toString());
+        return storeRepository.save(store);
     }
 }

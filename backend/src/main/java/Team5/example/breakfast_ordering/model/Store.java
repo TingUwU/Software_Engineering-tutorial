@@ -3,6 +3,7 @@ package Team5.example.breakfast_ordering.model;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 import java.util.List;
+import org.bson.types.ObjectId;
 
 @Document(collection = "stores")
 public class Store {
@@ -18,6 +19,7 @@ public class Store {
     private boolean isActive;
     private String updatedAt;
     private String ownerId;
+    private List<MenuItem> menu;
 
     // Getters and Setters
     public String getId() { return id; }
@@ -53,6 +55,9 @@ public class Store {
     public String getOwnerId() { return ownerId; }
     public void setOwnerId(String ownerId) { this.ownerId = ownerId; }
 
+    public List<MenuItem> getMenu() { return menu; }
+    public void setMenu(List<MenuItem> menu) { this.menu = menu; }
+
     // Inner class for BusinessHour
     public static class BusinessHour {
         private String day;
@@ -72,5 +77,31 @@ public class Store {
 
         public String getNote() { return note; }
         public void setNote(String note) { this.note = note; }
+    }
+
+    // MenuItem
+    public static class MenuItem {
+        private String id;
+        private String itemName;
+        private Double price;
+        private String description;
+        private String imgUrl;
+        private Boolean isAvailable;
+        private String tag;
+
+        public String getId() { return id; }
+        public void setId(String id) { this.id = id; }
+        public String getItemName() { return itemName; }
+        public void setItemName(String itemName) { this.itemName = itemName; }
+        public Double getPrice() { return price; }
+        public void setPrice(Double price) { this.price = price; }
+        public String getDescription() { return description; }
+        public void setDescription(String description) { this.description = description; }
+        public String getImgUrl() { return imgUrl; }
+        public void setImgUrl(String imgUrl) { this.imgUrl = imgUrl; }
+        public Boolean getIsAvailable() { return isAvailable; }
+        public void setIsAvailable(Boolean isAvailable) { this.isAvailable = isAvailable; }
+        public String getTag() { return tag; }
+        public void setTag(String tag) { this.tag = tag; }
     }
 }

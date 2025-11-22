@@ -37,4 +37,25 @@ public class StoreController {
         return ResponseEntity.ok(storeService.getAllStores());
     }
 
+    // 更新店家菜單
+    @PutMapping("/{id}/menu")
+    public ResponseEntity<?> updateMenu(
+            @PathVariable("id") String id,
+            @RequestBody List<Store.MenuItem> menu,
+            @RequestHeader(value = "Authorization", required = false) String authorization
+    ) {
+        String userId = storeService.parseUserIdFromAuthorization(authorization);
+        if (userId == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        try {                                       // 嘗試更新菜單
+            Store updated = storeService.updateMenu(id, menu, userId);
+            return ResponseEntity.ok(updated);
+        } catch (SecurityException e) {             // 沒有權限
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("FORBIDDEN");
+        } catch (IllegalArgumentException e) {      // 店家不存在或其他錯誤
+            if ("STORE_NOT_FOUND".equals(e.getMessage()))
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("STORE_NOT_FOUND");
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
 }
