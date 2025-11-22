@@ -1,293 +1,604 @@
 <template>
-    <div class="cart">
-        <!-- 遮罩層 -->
-        <div v-show="sidebarOpen" class="overlay" @click="toggleSidebar"></div>
+  <div class="cart-page">
+    <div class="cart-container">
+      <div class="header">
+        <button class="btn-back" @click="goBack">返回</button>
+        <button class="btn-avatar" @click="showProfile">頭像</button>
+      </div>
 
-        <!-- 左側側邊欄 -->
-        <div :class="['sidebar', { open: sidebarOpen }]">
-            <div class="sidebar-user">
-                <img class="sidebar-avatar" :src="customer.photo || require('@/assets/logo.png')" alt="user">
-                <span class="username">{{ customer.nickname }}, 肚子餓了嗎</span>
+      <div class="cart-items">
+        <div v-for="(item, index) in cart.items" :key="index" class="cart-item">
+          <div class="item-image">
+            <div class="image-placeholder">餐點圖片</div>
+          </div>
+
+          <div class="item-info">
+            <h3 class="item-name">{{ item.itemName || '餐點名稱' }}</h3>
+            <p class="item-customization">{{ item.customization.join('、') || '無客製化' }}</p>
+          </div>
+
+          <div class="item-quantity">
+            <span class="quantity-label">數量</span>
+            <div class="quantity-row">
+              <button class="btn-quantity" @click="decreaseQuantity(index)">-</button>
+              <input type="number" v-model.number="item.quantity" min="1" @change="updateQuantity(index)" />
+              <button class="btn-quantity" @click="increaseQuantity(index)">+</button>
             </div>
-            <ul>
-                <li @click="openUserModal">使用者資訊</li>
-                <router-link to="/cart"><li>購物車</li></router-link>
-                <li>訂單管理</li>
-                <li>歷史</li>
-                <li>收藏</li>
-            </ul>
-        </div>
-
-        <!-- 左上角顧客頭像 -->
-        <img class="avatar" :src="customer.photo || require('@/assets/logo.png')" alt="user" @click="toggleSidebar">
-
-        <!-- 標題 -->
-        <header class="header">
-            <h1 class="logo">購物車</h1>
-        </header>
-
-        <!-- 購物車橫向滑動卡片 -->
-        <div class="slider-container">
-            <button class="scroll-btn left" @click="scrollLeft">&#8249;</button>
-            <div ref="cartSlider" class="slider">
-                <div v-for="(item,index) in cartItems" :key="item._id" class="cart-item-card">
-                    <img :src="item.imgUrl || require('@/assets/logo.png')" class="cart-img" alt="餐點">
-                    <p class="cart-name">{{ item.itemName }}</p>
-                    <p class="cart-custom" v-if="item.customDesc">{{ item.customDesc }}</p>
-                    <div class="cart-qty">
-                        <button @click="decreaseQty(index)">-</button>
-                        <span>{{ item.quantity }}</span>
-                        <button @click="increaseQty(index)">+</button>
-                    </div>
-                    <p class="cart-subtotal">{{ item.quantity * item.price }} 元</p>
-                    <button class="cart-delete" @click="removeItem(index)">🗑</button>
-                </div>
+            
+            <div class="subtotal-row">
+              <span class="item-subtotal">小計金額：${{ item.itemSubTotal }}</span>
             </div>
-            <button class="scroll-btn right" @click="scrollRight">&#8250;</button>
+          </div>
+
+          <div class="item-actions">
+            <button class="btn-delete" @click="deleteItem(index)">刪除餐點</button>
+          </div>
         </div>
 
-        <!-- 備註 -->
-        <div class="cart-remark">
-            <label>備註:</label>
-            <input type="text" v-model="remark" placeholder="輸入備註…">
+        <div v-if="cart.items.length === 0" class="empty-cart">
+          購物車是空的
+        </div>
+      </div>
+
+      <div class="order-section">
+        <div class="top-row">
+          <div class="notes-section">
+            <label for="remarks">備註</label>
+            <input type="text" id="remarks" v-model="remarks" placeholder="請輸入備註" />
+          </div>
+
+          <div class="total-amount">
+            總金額：${{ cart.totalAmount }}
+          </div>
         </div>
 
-        <!-- 總金額 -->
-        <div class="cart-total">
-            <span>總金額: </span>
-            <span>{{ totalAmount }} 元</span>
-        </div>
-
-        <!-- 用餐方式 & 支付 -->
-        <div class="cart-options">
-            <details>
-                <summary>用餐方式</summary>
-                <div class="eat-method">
-                    <label><input type="radio" value="dinein" v-model="eatMethod"> 內用</label>
-                    <input v-if="eatMethod==='dinein'" type="text" v-model="tableNumber" placeholder="桌號">
-                    <label><input type="radio" value="takeout" v-model="eatMethod"> 外帶</label>
-                    <input v-if="eatMethod==='takeout'" type="time" v-model="pickupTime">
-                </div>
-            </details>
-
-            <div class="pay-method">
-                <label>支付方式:</label>
-                <select v-model="payMethod">
-                    <option value="cash">現金</option>
-                    <option value="credit">信用卡</option>
-                    <option value="linepay">LINE Pay</option>
-                </select>
+        <div class="bottom-row">
+          <div class="dining-options">
+            <div class="dining-option-row">
+              <label class="radio-item">
+                <input type="radio" v-model="orderType" value="內用" />
+                <span>內用</span>
+              </label>
+              <button class="btn-option" @click="inputTableNumber">輸入桌號</button>
             </div>
-        </div>
 
-        <!-- 操作按鈕 -->
-        <div class="cart-actions">
-            <router-link to="/home" class="btn">繼續點餐</router-link>
-            <router-link to="/checkout" class="btn primary">前往結帳</router-link>
+            <div class="dining-option-row">
+              <label class="radio-item">
+                <input type="radio" v-model="orderType" value="外帶" />
+                <span>外帶</span>
+              </label>
+              <button class="btn-option" @click="setPickupTime">設定取餐時間</button>
+              <button class="btn-option highlight" @click="inputPhoneNumber">輸入電話號碼</button>
+            </div>
+          </div>
+
+          <div class="checkout-buttons">
+            <button class="btn-option" @click="selectPaymentMethod">選擇支付方式</button>
+            <button class="btn-checkout" @click="checkout">前往結帳</button>
+          </div>
         </div>
+      </div>
     </div>
+  </div>
 </template>
 
-<script>
-    export default {
-        data() {
-            return {
-                sidebarOpen: false,
-                customer: { nickname: "使用者名稱", photo: "" },
-                cartItems: [
-                    { _id: '1', itemName: "豆漿", quantity: 1, price: 25, imgUrl: "", customDesc: "少糖" },
-                    { _id: '2', itemName: "油條", quantity: 2, price: 15, imgUrl: "", customDesc: "" },
-                    { _id: '3', itemName: "飯糰", quantity: 1, price: 30, imgUrl: "", customDesc: "多辣" }
-                ],
-                remark: "",
-                eatMethod: "dinein",
-                tableNumber: "",
-                pickupTime: "",
-                payMethod: "cash"
-            };
-        },
-        computed: {
-            totalAmount() {
-                return this.cartItems.reduce((sum, item) => sum + item.quantity * item.price, 0);
-            }
-        },
-        methods: {
-            toggleSidebar() { this.sidebarOpen = !this.sidebarOpen; },
-            increaseQty(index) { this.cartItems[index].quantity++; },
-            decreaseQty(index) { if (this.cartItems[index].quantity > 1) this.cartItems[index].quantity--; },
-            removeItem(index) { this.cartItems.splice(index, 1); },
-            scrollLeft() {
-                const slider = this.$refs.cartSlider;
-                slider.scrollBy({ left: -200, behavior: 'smooth' });
-            },
-            scrollRight() {
-                const slider = this.$refs.cartSlider;
-                slider.scrollBy({ left: 200, behavior: 'smooth' });
-            }
-        }
-    };
+<script setup>
+import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
+import { useStore } from 'vuex'
+
+const router = useRouter()
+const store = useStore()
+
+const remarks = ref('')
+const orderType = ref('外帶')
+
+const storeId = computed(() => store.state.cart.storeId) 
+const customerId = ref('') 
+const customerPhone = ref('')
+
+
+const tableNumber = ref('')
+
+const takeoutTime = ref(null) // Date
+
+const paymentMethod = ref('店內付款')
+
+const cart = computed(() => ({
+  items: store.state.cart.items,
+  totalAmount: store.getters['cart/totalAmount']
+}))
+
+const goBack = () => {
+  router.back()
+}
+
+const showProfile = () => {
+  alert('個人資料功能未實作')
+}
+
+const inputTableNumber = () => {
+  const input = prompt('請輸入桌號:')
+  if (input) {
+    tableNumber.value = input
+    alert(`桌號已設定為: ${input}`)
+  }
+}
+
+const setPickupTime = () => {
+  const input = prompt('請輸入取餐時間 (例如: 2024-01-01 12:00):')
+  if (input) {
+    takeoutTime.value = new Date(input)
+    alert(`取餐時間已設定為: ${input}`)
+  }
+}
+
+const inputPhoneNumber = () => {
+  const input = prompt('請輸入電話號碼:')
+  if (input) {
+    customerPhone.value = input
+    alert(`電話號碼已設定為: ${input}`)
+  }
+}
+
+const selectPaymentMethod = () => {
+  alert('目前僅支持店內付款')
+  paymentMethod.value = '店內付款'
+}
+
+const deleteItem = (index) => {
+  store.dispatch('cart/removeItem', index)
+}
+
+const increaseQuantity = (index) => {
+  const newQuantity = store.state.cart.items[index].quantity + 1
+  store.dispatch('cart/updateItemQuantity', { index, quantity: newQuantity })
+}
+
+const decreaseQuantity = (index) => {
+  if (store.state.cart.items[index].quantity > 1) {
+    const newQuantity = store.state.cart.items[index].quantity - 1
+    store.dispatch('cart/updateItemQuantity', { index, quantity: newQuantity })
+  }
+}
+
+const updateQuantity = (index) => {
+  const quantity = store.state.cart.items[index].quantity
+  if (quantity < 1) {
+    store.dispatch('cart/updateItemQuantity', { index, quantity: 1 })
+  } else {
+    store.dispatch('cart/updateItemQuantity', { index, quantity })
+  }
+}
+
+const checkout = () => {
+  if (store.state.cart.items.length === 0) {
+    alert('購物車是空的')
+    return
+  }
+
+  // 验证必填字段
+  if (!storeId.value) {
+    alert('錯誤：缺少店家ID（系統錯誤）')
+    return
+  }
+
+  if (!customerId.value && !customerPhone.value) {
+    alert('請輸入電話號碼（未登入用戶必填）')
+    return
+  }
+
+  if (orderType.value === '內用' && !tableNumber.value) {
+    alert('請輸入桌號')
+    return
+  }
+
+  if (orderType.value === '外帶' && !takeoutTime.value) {
+    alert('請設定取餐時間')
+    return
+  }
+
+  const orderData = {
+    storeId: storeId.value,
+    customerId: customerId.value || null,
+    customerPhone: customerPhone.value || '',
+    orderType: orderType.value,
+    dineInDetail: orderType.value === '內用' ? { 
+      tableNumber: tableNumber.value 
+    } : null,
+    takeoutDetail: orderType.value === '外帶' ? { 
+      takeoutTime: takeoutTime.value 
+    } : null,
+    items: store.state.cart.items,
+    totalAmount: store.getters['cart/totalAmount'],
+    remarks: remarks.value,
+    paymentMethod: paymentMethod.value
+  }
+
+  console.log('準備送出的訂單數據:', orderData)
+  
+  alert('訂單數據已準備完成，請查看控制台')
+}
 </script>
 
 <style scoped>
-    .cart {
-        padding: 20px;
-        font-family: "Microsoft JhengHei",sans-serif;
-        position: relative;
-    }
+.cart-page {
+  min-height: 100vh;
+  background-color: #fff;
+  color: #333;
+  padding: 20px;
+  font-family: "Microsoft JhengHei", "PingFang TC", "Noto Sans TC", sans-serif;
+}
 
-    .slider-container {
-        position: relative;
-        display: flex;
-        align-items: center;
-        margin: 20px 0;
-    }
+.header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
 
-    .slider {
-        display: flex;
-        gap: 15px;
-        overflow-x: auto;
-        scroll-behavior: smooth;
-        -webkit-overflow-scrolling: touch;
-        flex-wrap: nowrap;
-        padding-bottom: 10px;
-    }
+.btn-back {
+  padding: 10px 20px;
+  border: 2px solid #0069D9;
+  background: #0069D9;
+  color: white;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.3s;
+}
 
-        .slider::-webkit-scrollbar {
-            display: none;
-        }
+.btn-back:hover {
+  background: #0056b3;
+  border-color: #0056b3;
+}
 
-    .scroll-btn {
-        background-color: #0069D9;
-        color: #fff;
-        border: none;
-        border-radius: 50%;
-        width: 36px;
-        height: 36px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        position: absolute;
-        top: 50%;
-        transform: translateY(-50%);
-        z-index: 10;
-    }
+.btn-avatar {
+  width: 50px;
+  height: 50px;
+  border: none;
+  background-color: #0069D9;
+  color: white;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.3s;
+}
 
-        .scroll-btn.left {
-            left: -18px;
-        }
+.btn-avatar:hover {
+  background-color: #0056b3;
+}
 
-        .scroll-btn.right {
-            right: -18px;
-        }
+.cart-container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 30px;
+  border-radius: 10px;
+  background-color: #f9f9f9;
+  box-shadow: 0 2px 8px rgba(0, 105, 217, 0.1);
+}
 
-    .cart-item-card {
-        min-width: 180px;
-        flex-shrink: 0;
-        border-radius: 12px;
-        background: #fff;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        text-align: center;
-        padding: 10px;
-        position: relative;
-    }
+.cart-items {
+  margin-bottom: 30px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 10px;
+}
 
-    .cart-img {
-        width: 100%;
-        height: 110px;
-        border-radius: 12px 12px 0 0;
-        object-fit: cover;
-    }
+.cart-item {/*圖和字和按鈕間怎麼排*/ 
+  display: flex;
+  gap: 20px;
+  padding: 20px;
+  margin-bottom: 20px;
+  align-items: center;
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  transition: box-shadow 0.3s;
+}
 
-    .cart-name {
-        margin-top: 8px;
-        font-weight: bold;
-        color: #000;
-    }
+.cart-item:hover {
+  box-shadow: 0 4px 12px rgba(0, 105, 217, 0.15);
+}
 
-    .cart-custom {
-        font-size: 14px;
-        color: #666;
-    }
+.item-image {
+  width: 100px;
+  height: 100px;
+  border: 2px solid #0069D9;
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background-color: #f0f7ff;
+}
 
-    .cart-qty {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        gap: 5px;
-        margin-top: 5px;
-    }
+.image-placeholder {
+  text-align: center;
+  color: #0069D9;
+  font-size: 12px;
+}
 
-        .cart-qty button {
-            width: 28px;
-            height: 28px;
-        }
+.item-info {/*字之間怎麼排*/ 
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
 
-    .cart-subtotal {
-        font-weight: bold;
-        margin-top: 5px;
-    }
+.item-name {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+  white-space: nowrap;
+  color: #333;
+}
 
-    .cart-delete {
-        position: absolute;
-        top: 5px;
-        right: 5px;
-        background: none;
-        border: none;
-        font-size: 20px;
-        color: #999;
-        cursor: pointer;
-    }
+.item-customization {
+  font-size: 14px;
+  color: #666;
+  margin: 0;
+}
 
-    .cart-remark {
-        margin: 15px 0;
-    }
+.item-quantity {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-left: auto;
+  align-items: center;
+}
 
-        .cart-remark input {
-            width: 100%;
-            padding: 6px;
-            border-radius: 6px;
-            border: 1px solid #ccc;
-        }
+.quantity-label {
+  font-size: 16px;
+  font-weight: 600;
+  color: #0069D9;
+}
 
-    .cart-total {
-        font-weight: bold;
-        font-size: 18px;
-        margin-bottom: 10px;
-    }
+.quantity-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 
-    .cart-actions {
-        display: flex;
-        gap: 10px;
-        margin-top: 10px;
-    }
+.subtotal-row {
+  display: flex;
+  align-items: center;
+}
 
-    .btn {
-        padding: 10px 20px;
-        border-radius: 6px;
-        background-color: #ccc;
-        color: #333;
-        text-align: center;
-        text-decoration: none;
-    }
+.item-actions {
+  display: flex;
+  align-items: center;
+}
 
-        .btn.primary {
-            background-color: #0069D9;
-            color: #fff;
-        }
+.btn-delete {
+  padding: 8px 16px;
+  background-color: white;
+  border: 2px solid #ff4444;
+  color: #ff4444;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: all 0.3s;
+}
 
-    .cart-options {
-        margin: 15px 0;
-    }
+.btn-delete:hover {
+  background-color: #ff4444;
+  color: white;
+}
 
-    .eat-method {
-        display: flex;
-        gap: 15px;
-        align-items: center;
-        margin-top: 5px;
-    }
+.btn-quantity {
+  width: 35px;
+  height: 35px;
+  border: 2px solid #0069D9;
+  background: #0069D9;
+  color: white;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 18px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  transition: all 0.3s;
+}
 
-    .pay-method {
-        margin-top: 10px;
-    }
+.btn-quantity:hover {
+  background: #0056b3;
+  border-color: #0056b3;
+}
+
+.quantity-row input {
+  width: 60px;
+  padding: 8px;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 600;
+  border: 2px solid #0069D9;
+  background: white;
+  color: #333;
+  border-radius: 8px;
+}
+
+.quantity-row input:focus {
+  outline: none;
+  border-color: #0056b3;
+}
+
+.quantity-row input::-webkit-inner-spin-button,
+.quantity-row input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.quantity-row input[type=number] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.item-subtotal {
+  font-size: 16px;
+  font-weight: 600;
+  color: #0069D9;
+}
+
+.empty-cart {
+  text-align: center;
+  padding: 40px;
+  font-size: 18px;
+  color: #999;
+}
+
+.order-section {
+  border-top: 3px solid #0069D9;
+  padding-top: 30px;
+  background-color: white;
+  border-radius: 12px;
+  padding: 30px;
+  margin-top: 20px;
+}
+
+.top-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 25px;
+  gap: 30px;
+}
+
+.notes-section {
+  flex: 1;
+}
+
+.notes-section label {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #0069D9;
+}
+
+.notes-section input {
+  width: 100%;
+  padding: 12px;
+  background: white;
+  border: 2px solid #0069D9;
+  color: #333;
+  border-radius: 8px;
+  font-size: 16px;
+  transition: border-color 0.3s;
+}
+
+.notes-section input:focus {
+  outline: none;
+  border-color: #0056b3;
+}
+
+.total-amount {
+  font-size: 24px;
+  font-weight: bold;
+  white-space: nowrap;
+  color: #0069D9;
+}
+
+.bottom-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 30px;
+}
+
+.dining-options {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  align-items: flex-start;
+}
+
+.dining-option-row {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.checkout-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  align-items: flex-end;
+}
+
+.radio-item {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.radio-item input {
+  margin-right: 10px;
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  accent-color: #0069D9;
+}
+
+.radio-item span {
+  font-size: 18px;
+  color: #333;
+}
+
+.btn-option {
+  padding: 12px 24px;
+  background: #0069D9;
+  border: 2px solid #0069D9;
+  color: white;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  height: 45px;
+  align-items: center;
+  justify-content: center;
+  display: flex;
+  transition: all 0.3s;
+}
+
+.btn-option:hover {
+  background: #0056b3;
+  border-color: #0056b3;
+}
+
+.btn-option.highlight {
+  background-color: #0069D9;
+  border-color: #0069D9;
+  color: white;
+}
+
+.btn-option.highlight:hover {
+  background-color: #0056b3;
+  border-color: #0056b3;
+}
+
+.btn-checkout {
+  padding: 12px 30px;
+  background: #0069D9;
+  border: 2px solid #0069D9;
+  color: white;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 18px;
+  font-weight: 600;
+  transition: all 0.3s;
+}
+
+.btn-checkout:hover {
+  background: #0056b3;
+  border-color: #0056b3;
+}
 </style>
+
