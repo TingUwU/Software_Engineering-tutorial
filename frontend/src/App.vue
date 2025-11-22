@@ -1,8 +1,9 @@
 <template>
   <nav>
     <router-link to="/">Home</router-link> |
-    <router-link to="/about">About</router-link> |
-    <router-link to="/store-setting">StoreSetting</router-link>
+    <router-link to="/about">About</router-link>|
+    <router-link to="/login">Login</router-link>|
+    <router-link to="/cart">Cart</router-link>|
   </nav>
   <router-view/>
 </template>

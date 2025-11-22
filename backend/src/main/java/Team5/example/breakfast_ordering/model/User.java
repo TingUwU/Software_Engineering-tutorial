@@ -8,8 +8,8 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-@Document(collection = "customer") // 對應資料庫中的 customer 集合 
-public class Customer {
+@Document(collection = "user") // 對應資料庫中的 customer 集合 
+public class User {
 
     @Id
     private String id; // 顧客ID 
