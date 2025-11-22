@@ -46,8 +46,8 @@
                 <button class="scroll-btn left" @click="scrollLeft('chinese')">&#8249;</button>
                 <div ref="chineseSlider" class="slider">
                     <router-link v-for="shop in chineseShops"
-                                 :key="shop._id"
-                                 :to="{ name: 'ShopView', params: { id: shop._id } }"
+                                 :key="shop.id"
+                                 :to="{ name: 'ShopView', params: { id: shop.id } }"
                                  class="shop-card">
                         <img :src="shop.menu[0]?.imgUrl || require('@/assets/logo.png')" class="shop-img" alt="店家圖片">
                         <p class="shop-name">{{ shop.name }}</p>
@@ -64,8 +64,8 @@
                 <button class="scroll-btn left" @click="scrollLeft('western')">&#8249;</button>
                 <div ref="westernSlider" class="slider">
                     <router-link v-for="shop in westernShops"
-                                 :key="shop._id"
-                                 :to="{ name: 'ShopView', params: { id: shop._id } }"
+                                 :key="shop.id"
+                                 :to="{ name: 'ShopView', params: { id: shop.id } }"
                                  class="shop-card">
                         <img :src="shop.menu[0]?.imgUrl || require('@/assets/logo.png')" class="shop-img" alt="店家圖片">
                         <p class="shop-name">{{ shop.name }}</p>
@@ -119,12 +119,7 @@
 </template>
 
 <script>
-    import MenuItem from '@/components/MenuItem.vue';
-
     export default {
-        components: {
-            MenuItem
-        },
         data() {
             return {
                 sidebarOpen: false,
@@ -212,6 +207,7 @@
             handleAddToCart(cartItem) {
                 console.log('加入購物車:', cartItem);
                 this.$store.dispatch('cart/addItem', cartItem);
+            },
             onAvatarChange(event) {
                 const file = event.target.files[0];
                 if (file) {

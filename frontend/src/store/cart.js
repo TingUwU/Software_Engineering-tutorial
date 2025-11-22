@@ -4,7 +4,7 @@ export default {
   namespaced: true,
   state: () => ({
     items: [],
-    storeId: '' // 追踪当前购物车的店家ID
+    storeId: '' 
   }),
   getters: {
     totalAmount: (state) =>

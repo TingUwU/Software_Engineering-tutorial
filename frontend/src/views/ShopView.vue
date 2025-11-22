@@ -25,7 +25,7 @@
         <div class="shop-header">
             <h2 class="shop-name">{{ shop.name }}</h2>
             <button class="favorite-btn"
-                    :class="{ active: isFavorited(shop), animate: animateFavorites[shop._id] }"
+                    :class="{ active: isFavorited(shop), animate: animateFavorites[shop.id] }"
                     @click="toggleFavoriteWithAnimation(shop)">
                 <span v-if="isFavorited(shop)">❤️</span>
                 <span v-else>🤍</span>
@@ -55,7 +55,7 @@
             <div class="slider-container">
                 <button class="scroll-btn left" @click="scrollLeft(category.name)">&#8249;</button>
                 <div :ref="el => categoryRefs[category.name] = el" class="slider">
-                    <div v-for="dish in category.dishes" :key="dish._id" class="dish-card">
+                    <div v-for="dish in category.dishes" :key="dish.id" class="dish-card" @click="openMenuItem(dish)">
                         <img :src="dish.imgUrl || require('@/assets/logo.png')" class="shop-img" alt="菜品圖片">
                         <p class="dish-name">{{ dish.itemName }}</p>
                         <p class="dish-price">{{ dish.price }} 元</p>
@@ -103,18 +103,37 @@
                 <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
             </svg>
         </router-link>
+
+        <!-- MenuItem Modal -->
+        <MenuItem
+            :show="menuItemModalOpen"
+            :product="selectedProduct"
+            @close="closeMenuItem"
+            @add-to-cart="handleAddToCart"
+        />
     </div>
 </template>
 
 <script>
+    import MenuItem from '@/components/MenuItem.vue';
+
     export default {
+        components: {
+            MenuItem
+        },
         data() {
             return {
                 sidebarOpen: false,
                 userModalOpen: false,
+                menuItemModalOpen: false,
                 keyword: "",
+                selectedProduct: {
+                    id: '',
+                    itemName: '',
+                    price: 0
+                },
                 customer: {
-                    _id: "c1",
+                    id: "c1",
                     account: "user001",
                     nickname: "使用者名稱",
                     phone: "0912345678",
@@ -126,7 +145,7 @@
                 },
                 editCustomer: { photo: "" },
                 shop: {
-                    _id: "s1",
+                    id: "s1",
                     name: "小王豆漿",
                     address: "台北市大同區",
                     businessHours: [
@@ -135,10 +154,10 @@
                         { day: "Wed", start: "07:00", close: "14:00" },
                     ],
                     menu: [
-                        { _id: "d1", itemName: "豆漿", price: 25, imgUrl: "", tag: "中式早餐" },
-                        { _id: "d2", itemName: "油條", price: 15, imgUrl: "", tag: "中式早餐" },
-                        { _id: "d3", itemName: "飯糰", price: 30, imgUrl: "", tag: "小吃" },
-                        { _id: "d4", itemName: "包子", price: 20, imgUrl: "", tag: "小吃" },
+                        { id: "d1", itemName: "豆漿", price: 25, imgUrl: "", tag: "中式早餐" },
+                        { id: "d2", itemName: "油條", price: 15, imgUrl: "", tag: "中式早餐" },
+                        { id: "d3", itemName: "飯糰", price: 30, imgUrl: "", tag: "小吃" },
+                        { id: "d4", itemName: "包子", price: 20, imgUrl: "", tag: "小吃" },
                     ]
                 },
                 categoryRefs: {},
@@ -190,13 +209,13 @@
                 if (slider) slider.scrollBy({ left: 200, behavior: 'smooth' });
             },
             isFavorited(shop) {
-                return this.customer.favorStores.includes(shop._id);
+                return this.customer.favorStores.includes(shop.id);
             },
             toggleFavorite(shop) {
                 if (this.isFavorited(shop)) {
-                    this.customer.favorStores = this.customer.favorStores.filter(id => id !== shop._id);
+                    this.customer.favorStores = this.customer.favorStores.filter(id => id !== shop.id);
                 } else {
-                    this.customer.favorStores.push(shop._id);
+                    this.customer.favorStores.push(shop.id);
                 }
                 // TODO: call API to save favorStores
             },
@@ -204,13 +223,30 @@
                 this.toggleFavorite(shop);
 
                 // 使用展開運算符創建新對象，保持響應性
-                this.animateFavorites = { ...this.animateFavorites, [shop._id]: true };
+                this.animateFavorites = { ...this.animateFavorites, [shop.id]: true };
 
                 setTimeout(() => {
-                    this.animateFavorites = { ...this.animateFavorites, [shop._id]: false };
+                    this.animateFavorites = { ...this.animateFavorites, [shop.id]: false };
                 }, 300);
+            },
+            openMenuItem(dish) {
+                this.selectedProduct = {
+                    id: dish.id,
+                    itemName: dish.itemName,
+                    price: dish.price
+                };
+                this.menuItemModalOpen = true;
+            },
+            closeMenuItem() {
+                this.menuItemModalOpen = false;
+            },
+            handleAddToCart(cartItem) {
+                console.log('加入購物車:', cartItem);
+                // 設定店家 ID 到購物車
+                this.$store.dispatch('cart/setStoreId', this.shop.id);
+                // 加入商品到購物車
+                this.$store.dispatch('cart/addItem', cartItem);
             }
-
         }
     }
 </script>
@@ -438,6 +474,22 @@
         }
 
     /* 菜品卡片 */
+    .dish-card {
+        min-width: 160px;
+        flex-shrink: 0;
+        border-radius: 12px;
+        background: #fff;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        text-align: center;
+        padding-bottom: 10px;
+        transition: transform 0.3s;
+        cursor: pointer;
+    }
+
+        .dish-card:hover {
+            transform: scale(1.05);
+        }
+
     .shop-card {
         min-width: 160px;
         flex-shrink: 0;
@@ -455,6 +507,13 @@
         }
 
     .dish-img {
+        width: 100%;
+        height: 110px;
+        border-radius: 12px 12px 0 0;
+        object-fit: cover;
+    }
+
+    .shop-img {
         width: 100%;
         height: 110px;
         border-radius: 12px 12px 0 0;
