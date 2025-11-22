@@ -46,8 +46,8 @@
                 <button class="scroll-btn left" @click="scrollLeft('chinese')">&#8249;</button>
                 <div ref="chineseSlider" class="slider">
                     <router-link v-for="shop in chineseShops"
-                                 :key="shop._id"
-                                 :to="{ name: 'ShopView', params: { id: shop._id } }"
+                                 :key="shop.id"
+                                 :to="{ name: 'ShopView', params: { id: shop.id } }"
                                  class="shop-card">
                         <img :src="shop.menu[0]?.imgUrl || require('@/assets/logo.png')" class="shop-img" alt="店家圖片">
                         <p class="shop-name">{{ shop.name }}</p>
@@ -64,8 +64,8 @@
                 <button class="scroll-btn left" @click="scrollLeft('western')">&#8249;</button>
                 <div ref="westernSlider" class="slider">
                     <router-link v-for="shop in westernShops"
-                                 :key="shop._id"
-                                 :to="{ name: 'ShopView', params: { id: shop._id } }"
+                                 :key="shop.id"
+                                 :to="{ name: 'ShopView', params: { id: shop.id } }"
                                  class="shop-card">
                         <img :src="shop.menu[0]?.imgUrl || require('@/assets/logo.png')" class="shop-img" alt="店家圖片">
                         <p class="shop-name">{{ shop.name }}</p>
@@ -124,32 +124,41 @@
             return {
                 sidebarOpen: false,
                 userModalOpen: false,
+                menuItemModalOpen: false,
+                selectedProduct: {
+                    id: '',
+                    itemName: '',
+                    price: 0
+                },
                 keyword: "",
                 customer: {
-                    _id: "c1",
+                    id: "c1",
                     account: "user001",
+                    password: "", // 不應在前端顯示
                     nickname: "使用者名稱",
+                    role: "buyer", // buyer/owner/admin
+                    photo: "", // 沒有頭像就顯示 logo
                     phone: "0912345678",
                     email: "user001@test.com",
-                    photo: "", // 沒有頭像就顯示 logo
-                    favorStores: [],
-                    favorItems: [],
-                    customCombos: []
+                    favorStores: [], // Array<String> - 店家ID列表
+                    favorItems: [], // Array<{storeId: String, itemId: String}>
+                    customCombos: [], // Array<{comboName: String, items: Array<FavorItem>}>
+                    updatedAt: null // Date
                 },
                 editCustomer: {
                     photo: ""
                 },
                 chineseShops: [
-                    { _id: 'c1', name: "小王豆漿", menu: [] },
-                    { _id: 'c2', name: "阿婆飯糰", menu: [] },
-                    { _id: 'c3', name: "大同包子", menu: [] },
-                    { _id: 'c4', name: "晨光饅頭", menu: [] }
+                    { id: 'c1', name: "小王豆漿", menu: [] },
+                    { id: 'c2', name: "阿婆飯糰", menu: [] },
+                    { id: 'c3', name: "大同包子", menu: [] },
+                    { id: 'c4', name: "晨光饅頭", menu: [] }
                 ],
                 westernShops: [
-                    { _id: 'w1', name: "早安美芝城", menu: [] },
-                    { _id: 'w2', name: "拉亞漢堡", menu: [] },
-                    { _id: 'w3', name: "美式早餐坊", menu: [] },
-                    { _id: 'w4', name: "早午餐咖啡館", menu: [] }
+                    { id: 'w1', name: "早安美芝城", menu: [] },
+                    { id: 'w2', name: "拉亞漢堡", menu: [] },
+                    { id: 'w3', name: "美式早餐坊", menu: [] },
+                    { id: 'w4', name: "早午餐咖啡館", menu: [] }
                 ]
             };
         },
@@ -176,6 +185,28 @@
             scrollRight(type) {
                 const slider = type === 'chinese' ? this.$refs.chineseSlider : this.$refs.westernSlider;
                 slider.scrollBy({ left: 200, behavior: 'smooth' });
+            },
+            goToCart(){
+                this.$router.push('/cart');
+            },
+            handleShopClick(shop) {
+                // 設定當前店家ID到購物車
+                this.$store.dispatch('cart/setStoreId', shop.id);
+                
+                    this.selectedProduct = {
+                        id: shop.id,
+                        itemName: 'TEST',
+                        price: 80
+                    };
+                    this.menuItemModalOpen = true;
+                
+            },
+            closeMenuItemModal() {
+                this.menuItemModalOpen = false;
+            },
+            handleAddToCart(cartItem) {
+                console.log('加入購物車:', cartItem);
+                this.$store.dispatch('cart/addItem', cartItem);
             },
             onAvatarChange(event) {
                 const file = event.target.files[0];
