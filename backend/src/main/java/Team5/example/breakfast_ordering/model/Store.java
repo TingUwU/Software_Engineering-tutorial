@@ -152,5 +152,4 @@ public class Store {
     }
     
     // (記得生成所有欄位的 Getters 和 Setters)
-    
 }
