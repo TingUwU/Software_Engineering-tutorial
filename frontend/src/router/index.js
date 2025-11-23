@@ -5,12 +5,14 @@ import ShopView from '@/views/ShopView.vue';
 import CartView from '@/views/CartView.vue';
 import LoginView from '@/views/LoginView.vue';
 import RegisterView from '@/views/RegisterView.vue';
+import FavoriteView from '@/views/FavoriteView.vue';
 const routes = [
     { path: '/', name: 'Home', component: HomeView },
     { path: '/cart', name: 'Cart', component: CartView },
     { path: '/shop/:id', name: 'ShopView', component: ShopView, props: true },
     { path: '/login', name: 'Login', component: LoginView },
     { path: '/register', name: 'Register', component: RegisterView },
+    { path: '/favorite', name: 'Favorite', component: FavoriteView },
 ];
 
 const router = createRouter({

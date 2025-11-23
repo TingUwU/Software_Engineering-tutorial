@@ -131,36 +131,30 @@
                     price: 0
                 },
                 keyword: "",
-                customer: {
-                    id: "c1",
-                    account: "user001",
-                    password: "", // 不應在前端顯示
-                    nickname: "使用者名稱",
-                    role: "buyer", // buyer/owner/admin
-                    photo: "", // 沒有頭像就顯示 logo
-                    phone: "0912345678",
-                    email: "user001@test.com",
-                    favorStores: [], // Array<String> - 店家ID列表
-                    favorItems: [], // Array<{storeId: String, itemId: String}>
-                    customCombos: [], // Array<{comboName: String, items: Array<FavorItem>}>
-                    updatedAt: null // Date
-                },
                 editCustomer: {
                     photo: ""
-                },
-                chineseShops: [
-                    { id: 'c1', name: "小王豆漿", menu: [] },
-                    { id: 'c2', name: "阿婆飯糰", menu: [] },
-                    { id: 'c3', name: "大同包子", menu: [] },
-                    { id: 'c4', name: "晨光饅頭", menu: [] }
-                ],
-                westernShops: [
-                    { id: 'w1', name: "早安美芝城", menu: [] },
-                    { id: 'w2', name: "拉亞漢堡", menu: [] },
-                    { id: 'w3', name: "美式早餐坊", menu: [] },
-                    { id: 'w4', name: "早午餐咖啡館", menu: [] }
-                ]
+                }
             };
+        },
+        computed: {
+            //獲取用戶資料
+            customer() {
+                return this.$store.getters['user/customer']
+            },
+            // 獲取所有店家資料
+            allShops() {
+                return this.$store.getters['shops/allShops']
+            },
+            // 中式店家（根據 ID 過濾）
+            chineseShops() {
+                const chineseIds = ['store001', 'store002', 'c1', 'c2'];
+                return this.allShops.filter(shop => chineseIds.includes(shop.id));
+            },
+            // 西式店家（根據 ID 過濾）
+            westernShops() {
+                const westernIds = ['store003', 'store004', 'w1', 'w2'];
+                return this.allShops.filter(shop => westernIds.includes(shop.id));
+            }
         },
         methods: {
             toggleSidebar() {
@@ -174,7 +168,7 @@
                 this.userModalOpen = false;
             },
             updateUser() {
-                this.customer = { ...this.editCustomer };
+                this.$store.dispatch('user/updateCustomer', this.editCustomer);
                 this.closeUserModal();
                 alert('使用者資訊已更新！');
             },
@@ -189,18 +183,7 @@
             goToCart(){
                 this.$router.push('/cart');
             },
-            handleShopClick(shop) {
-                // 設定當前店家ID到購物車
-                this.$store.dispatch('cart/setStoreId', shop.id);
-                
-                    this.selectedProduct = {
-                        id: shop.id,
-                        itemName: 'TEST',
-                        price: 80
-                    };
-                    this.menuItemModalOpen = true;
-                
-            },
+           
             closeMenuItemModal() {
                 this.menuItemModalOpen = false;
             },

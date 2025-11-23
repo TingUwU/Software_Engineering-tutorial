@@ -1,5 +1,5 @@
 <template>
-    <div class="shop">
+    <div class="home">
         <!-- 遮罩層 -->
         <div v-show="sidebarOpen" class="overlay" @click="toggleSidebar"></div>
 
@@ -21,26 +21,16 @@
         <!-- 左上角顧客頭像 -->
         <img class="avatar" :src="customer.photo || require('@/assets/logo.png')" alt="user" @click="toggleSidebar">
 
-        <!-- 店家名稱 + 收藏 -->
-        <div class="shop-header">
-            <h2 class="shop-name">{{ shop.name }}</h2>
-            <button class="favorite-btn"
-                    :class="{ active: isFavorited(shop), animate: animateFavorites[shop.id] }"
-                    @click="toggleFavoriteWithAnimation(shop)">
-                <span v-if="isFavorited(shop)">❤️</span>
-                <span v-else>🤍</span>
-            </button>
-        </div>
+        <!-- LOGO + 系統名稱 -->
+        <header class="header">
+            <div class="logo-container">
+                <h1 class="logo">收藏</h1>
+            </div>
+        </header>
 
-        <!-- 店家資訊 -->
-        <div class="shop-info">
-            <p>營業時間: {{ todayBusiness.start || '未營業' }} ~ {{ todayBusiness.close || '未營業' }}</p>
-            <p>地址: {{ shop.address }}</p>
-        </div>
-
-        <!-- 搜尋商品 -->
+        <!-- 搜尋區 -->
         <div class="search-section">
-            <input type="text" class="search-bar" placeholder="搜尋菜品…" v-model="keyword">
+            <input type="text" class="search-bar" placeholder="搜尋收藏的餐廳/商品…" v-model="keyword">
             <button class="search-btn">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <circle cx="11" cy="11" r="8" />
@@ -49,21 +39,52 @@
             </button>
         </div>
 
-        <!-- 菜品分類與滾輪 -->
-        <section v-for="category in filteredCategories" :key="category.name" class="category-section">
-            <h2 class="category-title">{{ category.name }}</h2>
-            <div class="slider-container">
-                <button class="scroll-btn left" @click="scrollLeft(category.name)">&#8249;</button>
-                <div :ref="el => categoryRefs[category.name] = el" class="slider">
-                    <div v-for="dish in category.dishes" :key="dish.id" class="dish-card" @click="openMenuItem(dish)">
-                        <img :src="dish.imgUrl || require('@/assets/logo.png')" class="shop-img" alt="菜品圖片">
-                        <p class="dish-name">{{ dish.itemName }}</p>
-                        <p class="dish-price">{{ dish.price }} 元</p>
+        <!-- 收藏的餐廳 -->
+        <section class="category-section">
+            <h2 class="category-title">餐廳 ({{ favoriteStores.length }})</h2>
+            <div v-if="favoriteStores.length > 0" class="slider-container">
+                <button class="scroll-btn left" @click="scrollLeft('stores')">&#8249;</button>
+                <div ref="storesSlider" class="slider">
+                    <div v-for="store in favoriteStores"
+                         :key="store.id"
+                         class="shop-card"
+                         @click="goToStore(store.id)">
+                        <img :src="store.menu[0]?.imgUrl || require('@/assets/logo.png')" class="shop-img" alt="店家圖片">
+                        <p class="shop-name">{{ store.name }}</p>
                     </div>
                 </div>
-                <button class="scroll-btn right" @click="scrollRight(category.name)">&#8250;</button>
+                <button class="scroll-btn right" @click="scrollRight('stores')">&#8250;</button>
+            </div>
+            <div v-else class="empty-message">
+                <p>尚無收藏的餐廳</p>
             </div>
         </section>
+
+        <!-- 收藏的商品 -->
+        <section class="category-section">
+            <h2 class="category-title">商品 ({{ favoriteItems.length }})</h2>
+            <div v-if="favoriteItems.length > 0" class="slider-container">
+                <button class="scroll-btn left" @click="scrollLeft('items')">&#8249;</button>
+                <div ref="itemsSlider" class="slider">
+                    <div v-for="item in favoriteItems"
+                         :key="item.id"
+                         class="shop-card"
+                         @click="openMenuItem(item)">
+                        <img :src="item.imgUrl || require('@/assets/logo.png')" class="shop-img" alt="商品圖片">
+                        <div class="item-info">
+                            <p class="shop-name">{{ item.itemName }}</p>
+                            <p class="item-store">{{ item.storeName }}</p>
+                            <p class="item-price">NT$ {{ item.price }}</p>
+                        </div>
+                    </div>
+                </div>
+                <button class="scroll-btn right" @click="scrollRight('items')">&#8250;</button>
+            </div>
+            <div v-else class="empty-message">
+                <p>尚無收藏的商品</p>
+            </div>
+        </section>
+
 
         <!-- 使用者資訊 Modal -->
         <div v-if="userModalOpen" class="modal-overlay" @click.self="closeUserModal">
@@ -95,6 +116,16 @@
             </div>
         </div>
 
+        <!-- 商品詳情 Modal -->
+        <MenuItem
+            :show="menuItemModalOpen"
+            :product="selectedProduct"
+            :isFavorited="true"
+            @close="closeMenuItem"
+            @add-to-cart="handleAddToCart"
+            @toggle-favorite="toggleItemFavorite"
+        />
+
         <!-- 右下角購物車快捷 -->
         <router-link to="/cart" class="cart-btn">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="24" height="24">
@@ -104,15 +135,6 @@
             </svg>
         </router-link>
 
-        <!-- MenuItem Modal -->
-        <MenuItem
-            :show="menuItemModalOpen"
-            :product="selectedProduct"
-            :isFavorited="isItemFavorited(selectedProduct.id)"
-            @close="closeMenuItem"
-            @add-to-cart="handleAddToCart"
-            @toggle-favorite="toggleItemFavorite"
-        />
     </div>
 </template>
 
@@ -128,117 +150,99 @@
                 sidebarOpen: false,
                 userModalOpen: false,
                 menuItemModalOpen: false,
-                keyword: "",
                 selectedProduct: {
                     id: '',
                     itemName: '',
-                    price: 0
+                    price: 0,
+                    description: '',
+                    imgUrl: '',
+                    storeId: ''
                 },
-                editCustomer: { photo: "" },
-                shop: null, // 初始為 null，等待從 store 載入
-                categoryRefs: {},
-                animateFavorites: {}, // 每個店家動畫狀態
-            }
-        },
-        created() {
-            // 組件創建時載入店家資料
-            this.loadShop()
-        },
-        watch: {
-            // 監聽路由變化，切換店家時重新載入資料
-            '$route.params.id': function(newId) {
-                if (newId) {
-                    this.loadShop()
+                keyword: "",
+                editCustomer: {
+                    photo: ""
                 }
-            }
+            };
         },
         computed: {
-            // 從 Vuex 獲取用戶資料
+            //獲取用戶資料
             customer() {
                 return this.$store.getters['user/customer']
             },
-            // 取得今天營業時間
-            todayBusiness() {
-                if (!this.shop) return {};//防止還沒加載出來就被訪問
-                const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-                const today = days[new Date().getDay()];
-                return this.shop.businessHours.find(h => h.day === today) || {};//找到今天營業時間來決定顯示是否營業中
+            //獲取所有店家資料
+            stores() {
+                return this.$store.getters['shops/allShops']
             },
-            // 根據關鍵字過濾
-            filteredCategories() {
-                if (!this.shop || !this.shop.menu) return [];
-                const categoriesMap = {};
-                this.shop.menu.forEach(item => {
-                    if (this.keyword && !item.itemName.includes(this.keyword)) return;
-                    if (!categoriesMap[item.tag]) categoriesMap[item.tag] = [];
-                    categoriesMap[item.tag].push(item);
+            favoriteStores() {
+                return this.stores.filter(store => 
+                    this.customer.favorStores.includes(store.id)
+                );
+            },
+            favoriteItems() {
+                const items = [];
+                this.customer.favorItems.forEach(favorItem => {
+                    const store = this.stores.find(s => s.id === favorItem.storeId);
+                    if (store) {
+                        favorItem.itemId.forEach(itemId => {
+                            const menuItem = store.menu.find(m => m.id === itemId);
+                            if (menuItem) {
+                                items.push({
+                                    storeId: store.id,
+                                    storeName: store.name,
+                                    ...menuItem
+                                });
+                            }
+                        });
+                    }
                 });
-                return Object.keys(categoriesMap).map(tag => ({ name: tag, dishes: categoriesMap[tag] }));
+                return items;
             }
         },
         methods: {
-            // 根據路由參數載入店家資料
-            loadShop() {
-                const shopId = this.$route.params.id;
-                const shop = this.$store.getters['shops/getShopById'](shopId);
-                if (shop) {
-                    this.shop = shop;
-                } else {
-                    // 如果找不到店家，顯示錯誤或導航回首頁
-                    alert('找不到該店家');
-                    this.$router.push('/');
-                }
+            toggleSidebar() {
+                this.sidebarOpen = !this.sidebarOpen;
             },
-
-            toggleSidebar() { this.sidebarOpen = !this.sidebarOpen; },
-            openUserModal() { this.editCustomer = { ...this.customer }; this.userModalOpen = true; },
-            closeUserModal() { this.userModalOpen = false; },
+            openUserModal() {
+                this.editCustomer = { ...this.customer };
+                this.userModalOpen = true;
+            },
+            closeUserModal() {
+                this.userModalOpen = false;
+            },
             updateUser() {
                 this.$store.dispatch('user/updateCustomer', this.editCustomer);
                 this.closeUserModal();
-                alert("使用者資訊已更新！");
-                // TODO: call API to save user info
+                alert('使用者資訊已更新！');
             },
-            
-            onAvatarChange(event) {
-                const file = event.target.files[0];
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onload = e => { this.editCustomer.photo = e.target.result; };
-                    reader.readAsDataURL(file);
+            scrollLeft(type) {
+                const slider = type === 'stores' ? this.$refs.storesSlider : this.$refs.itemsSlider;
+                if (slider) {
+                    slider.scrollBy({ left: -200, behavior: 'smooth' });
                 }
             },
-            scrollLeft(category) {
-                const slider = this.categoryRefs[category];
-                if (slider) slider.scrollBy({ left: -200, behavior: 'smooth' });
+            scrollRight(type) {
+                const slider = type === 'stores' ? this.$refs.storesSlider : this.$refs.itemsSlider;
+                if (slider) {
+                    slider.scrollBy({ left: 200, behavior: 'smooth' });
+                }
             },
-            scrollRight(category) {
-                const slider = this.categoryRefs[category];
-                if (slider) slider.scrollBy({ left: 200, behavior: 'smooth' });
+            goToCart(){
+                this.$router.push('/cart');
             },
-            isFavorited(shop) {
-                return this.$store.getters['user/isStoreFavorited'](shop.id);
+            goToStore(storeId) {
+                this.$router.push({ name: 'ShopView', params: { id: storeId } });
             },
-            toggleFavorite(shop) {
-                this.$store.dispatch('user/toggleFavorStore', shop.id);
-                // TODO: call API to save favorStores
-            },
-            toggleFavoriteWithAnimation(shop) {
-                this.toggleFavorite(shop);
-
-                // 保持白心或紅心
-                this.animateFavorites = { ...this.animateFavorites, [shop.id]: true };
-
-                setTimeout(() => {
-                    this.animateFavorites = { ...this.animateFavorites, [shop.id]: false };
-                }, 300);
-            },
-            openMenuItem(dish) {
+            openMenuItem(item) {
                 this.selectedProduct = {
-                    id: dish.id,
-                    itemName: dish.itemName,
-                    price: dish.price
+                    id: item.id,
+                    itemName: item.itemName,
+                    price: item.price,
+                    description: item.description,
+                    imgUrl: item.imgUrl,
+                    storeId: item.storeId // 保存店家ID用於收藏功能
                 };
+                // 設定當前店家ID到購物車
+                this.$store.dispatch('cart/setStoreId', item.storeId);
                 this.menuItemModalOpen = true;
             },
             closeMenuItem() {
@@ -246,38 +250,42 @@
             },
             handleAddToCart(cartItem) {
                 console.log('加入購物車:', cartItem);
-                // 設定店家 ID 到購物車
-                this.$store.dispatch('cart/setStoreId', this.shop.id);
-                // 加入商品到購物車
                 this.$store.dispatch('cart/addItem', cartItem);
             },
-            // 檢查商品是否已收藏
-            isItemFavorited(itemId) {
-                return this.$store.getters['user/isItemFavorited'](this.shop.id, itemId);
-            },
-            // 切換商品收藏狀態
             toggleItemFavorite() {
                 const itemId = this.selectedProduct.id;
-                const storeId = this.shop.id;
+                const storeId = this.selectedProduct.storeId;
                 
                 this.$store.dispatch('user/toggleFavorItem', { storeId, itemId }).then(isFavorited => {
                     if (isFavorited) {
                         alert('已加入收藏');
                     } else {
                         alert('已取消收藏');
+                        // 關閉 Modal（因為已經取消收藏）
+                        this.closeMenuItem();
                     }
                 });
                 // TODO: call API to save favorItems
+            },
+            onAvatarChange(event) {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = e => {
+                        this.editCustomer.photo = e.target.result; // base64 字串
+                    };
+                    reader.readAsDataURL(file);
+                }
             }
         }
-    }
+    };
 </script>
 
 <style scoped>
-    .shop {
+    .home {
         background-color: #fff;
         padding: 20px;
-        font-family: "Microsoft JhengHei","PingFang TC","Noto Sans TC",sans-serif;
+        font-family: "Microsoft JhengHei", "PingFang TC", "Noto Sans TC", sans-serif;
         position: relative;
         overflow: hidden;
     }
@@ -315,6 +323,7 @@
             transform: translateX(0);
         }
 
+    /* sidebar 使用者資訊 */
     .sidebar-user {
         display: flex;
         align-items: center;
@@ -330,24 +339,28 @@
 
     .username {
         color: #fff;
+        font-size: 16px;
         font-weight: bold;
     }
 
+    /* sidebar 選項 */
     .sidebar ul {
         list-style: none;
         padding: 0;
         margin: 0;
+        width: 100%;
         display: flex;
         flex-direction: column;
         gap: 15px;
-        width: 100%;
     }
 
     .sidebar li {
         color: #fff;
         cursor: pointer;
         font-size: 16px;
+        width: 100%;
         padding: 10px 0;
+        text-align: left;
         border-radius: 4px;
     }
 
@@ -366,7 +379,6 @@
         cursor: pointer;
         z-index: 101;
     }
-
     .preview-avatar {
         width: 80px;
         height: 80px;
@@ -376,31 +388,29 @@
         margin-bottom: 8px;
     }
 
-    /* 店家名稱 + 收藏 */
-    .shop-header {
+    /* LOGO + 系統名稱 */
+    .header {
         display: flex;
-        justify-content: center; /* 置中 */
+        justify-content: center;
         align-items: center;
         margin-top: 20px;
-        gap: 10px; /* 收藏按鈕和店名間距 */
     }
 
-    .shop-name {
+    .logo-container {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .logo-img {
+        width: 40px;
+        height: 40px;
+    }
+
+    .logo {
+        color: #0069D9;
         font-size: 28px;
         font-weight: bold;
-        color: #0069D9; /* 藍色 */
-    }
-
-    .favorite-btn {
-        background: none;
-        border: none;
-        font-size: 24px;
-        cursor: pointer;
-    }
-
-    /* 店家資訊 */
-    .shop-info p {
-        margin: 4px 0;
     }
 
     /* 搜尋欄 */
@@ -433,9 +443,14 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        color: white;
         cursor: pointer;
     }
+
+        .search-btn svg {
+            stroke: white;
+            width: 20px;
+            height: 20px;
+        }
 
     /* 分類區塊 */
     .category-section {
@@ -448,7 +463,7 @@
         margin-bottom: 10px;
     }
 
-    /* 滑動區塊 */
+    /* 左右滑動區塊 */
     .slider-container {
         position: relative;
         width: 100%;
@@ -470,6 +485,7 @@
             display: none;
         }
 
+    /* 滑動按鈕 */
     .scroll-btn {
         background-color: #0069D9;
         color: #fff;
@@ -495,23 +511,7 @@
             right: -18px;
         }
 
-    /* 菜品卡片 */
-    .dish-card {
-        min-width: 160px;
-        flex-shrink: 0;
-        border-radius: 12px;
-        background: #fff;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        text-align: center;
-        padding-bottom: 10px;
-        transition: transform 0.3s;
-        cursor: pointer;
-    }
-
-        .dish-card:hover {
-            transform: scale(1.05);
-        }
-
+    /* 店家卡片 */
     .shop-card {
         min-width: 160px;
         flex-shrink: 0;
@@ -522,18 +522,12 @@
         padding-bottom: 10px;
         transition: transform 0.3s;
         text-decoration: none;
+        cursor: pointer;
     }
 
         .shop-card:hover {
             transform: scale(1.05);
         }
-
-    .dish-img {
-        width: 100%;
-        height: 110px;
-        border-radius: 12px 12px 0 0;
-        object-fit: cover;
-    }
 
     .shop-img {
         width: 100%;
@@ -545,22 +539,40 @@
     .shop-name {
         margin-top: 8px;
         font-weight: bold;
-        color: #0069D9; /* 藍色文字 */
+        color: #000; /* 黑色文字 */
         text-decoration: none; /* 去掉底線 */
     }
 
-    .dish-name {
+    /* 商品資訊 */
+    .item-info {
+        padding: 0 10px;
+    }
+
+    .item-store {
         margin-top: 4px;
-        font-weight: bold;
-        color: #000; /* 藍色文字 */
-        text-decoration: none; /* 去掉底線 */
+        font-size: 12px;
+        color: #666;
     }
 
-    .dish-price {
-        margin-top: 2px;
-        font-weight: normal;
-        color: #333;
+    .item-price {
+        margin-top: 4px;
+        font-size: 14px;
+        font-weight: bold;
+        color: #0069D9;
     }
+
+    /* 空狀態訊息 */
+    .empty-message {
+        text-align: center;
+        padding: 40px 20px;
+        color: #999;
+        font-size: 16px;
+    }
+
+        .empty-message p {
+            margin: 0;
+        }
+
 
     /* Modal */
     .modal-overlay {
@@ -615,25 +627,24 @@
         margin-top: 15px;
     }
 
-        .modal-actions button:first-child {
-            background-color: #0069D9;
-            color: #fff;
+        .modal-actions button {
             padding: 6px 12px;
             border: none;
             border-radius: 6px;
             cursor: pointer;
         }
 
-        .modal-actions button:last-child {
-            background-color: #ccc;
-            color: #333;
-            padding: 6px 12px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-        }
+            .modal-actions button:first-child {
+                background-color: #0069D9;
+                color: #fff;
+            }
 
-    /* 右下角購物車 */
+            .modal-actions button:last-child {
+                background-color: #ccc;
+                color: #333;
+            }
+
+    /* 右下角購物車圖示 */
     .cart-btn {
         position: fixed;
         right: 20px;
@@ -648,42 +659,11 @@
         z-index: 150;
         cursor: pointer;
         box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-        color: white;
-        font-size: 28px;
-        text-align: center;
-        line-height: 56px;
     }
 
-    .favorite-btn {
-        background: none;
-        border: none;
-        font-size: 24px;
-        cursor: pointer;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        transition: transform 0.2s;
-    }
-
-        .favorite-btn.animate {
-            animation: pop 0.3s ease forwards;
+        .cart-btn svg {
+            stroke: white;
+            width: 28px;
+            height: 28px;
         }
-
-    @keyframes pop {
-        0% {
-            transform: scale(1);
-        }
-
-        50% {
-            transform: scale(1.5);
-        }
-
-        100% {
-            transform: scale(1);
-        }
-    }
-
-    .favorite-btn.active span {
-        color: red; /* 已收藏顯示紅色 */
-    }
 </style>
