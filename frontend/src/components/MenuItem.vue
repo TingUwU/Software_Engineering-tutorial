@@ -17,7 +17,7 @@
           </div>
           <div class="action-buttons"><!--按鈕區-->
             <button class="btn-action" @click="addToCustom">加入自訂組合</button>
-            <button class="btn-action" @click="addToFavorite">收藏</button>
+            <button class="btn-action" @click="addToFavorite">{{ isFavorited ? '取消收藏' : '收藏' }}</button>
           </div>
         </div>
 
@@ -72,11 +72,15 @@ const props = defineProps({
       itemName: 'null',
       price: 50
     })
+  },
+  isFavorited: {
+    type: Boolean,
+    default: false
   }
 })
 
 // Emits
-const emit = defineEmits(['close', 'add-to-cart'])
+const emit = defineEmits(['close', 'add-to-cart', 'toggle-favorite'])
 
 // 使用 props 中的 product
 const productItem = computed(() => props.product)
@@ -144,7 +148,7 @@ const addToCustom = () => {
 }
 
 const addToFavorite = () => {
-  alert('收藏功能未實作')
+  emit('toggle-favorite')
 }
 </script>
 
