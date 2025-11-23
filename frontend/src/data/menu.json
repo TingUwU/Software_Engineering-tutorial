@@ -1,0 +1,92 @@
+[
+  {
+    "_id": "66f1a0c1a2b4d90123456701",
+    "itemName": "招牌牛肉麵",
+    "price": 160,
+    "description": "慢火熬煮牛骨湯頭，搭配半筋半肉。",
+    "imgUrl": "https://example.com/img/beef-noodle.jpg",
+    "isAvailable": true,
+    "tag": "主食"
+  },
+  {
+    "_id": "66f1a0c1a2b4d90123456702",
+    "itemName": "川味紅油抄手",
+    "price": 95,
+    "description": "手工鮮肉餛飩，麻辣鮮香。",
+    "imgUrl": "https://example.com/img/wonton.jpg",
+    "isAvailable": true,
+    "tag": "小吃"
+  },
+  {
+    "_id": "66f1a0c1a2b4d90123456703",
+    "itemName": "季節時蔬",
+    "price": 70,
+    "description": "每日新鮮產地直送清炒蔬菜。",
+    "imgUrl": "https://example.com/img/veggie.jpg",
+    "isAvailable": true,
+    "tag": "配菜"
+  },
+  {
+    "_id": "66f1a0c1a2b4d90123456704",
+    "itemName": "滷豆干",
+    "price": 45,
+    "description": "古法滷汁入味，口感紮實。",
+    "imgUrl": "https://example.com/img/tofu.jpg",
+    "isAvailable": true,
+    "tag": "小菜"
+  },
+  {
+    "_id": "66f1a0c1a2b4d90123456705",
+    "itemName": "秘製炸排骨",
+    "price": 120,
+    "description": "醃製 12 小時，外酥內嫩。",
+    "imgUrl": "https://example.com/img/pork-chop.jpg",
+    "isAvailable": false,
+    "tag": "主食"
+  },
+  {
+    "_id": "66f1a0c1a2b4d90123456706",
+    "itemName": "滷蛋",
+    "price": 20,
+    "description": "焦糖色澤，入味綿密。",
+    "imgUrl": "https://example.com/img/egg.jpg",
+    "isAvailable": true,
+    "tag": "小菜"
+  },
+  {
+    "_id": "66f1a0c1a2b4d90123456707",
+    "itemName": "酸辣湯",
+    "price": 55,
+    "description": "香醋與白胡椒平衡的酸辣口感。",
+    "imgUrl": "https://example.com/img/hot-sour-soup.jpg",
+    "isAvailable": true,
+    "tag": "湯品"
+  },
+  {
+    "_id": "66f1a0c1a2b4d90123456708",
+    "itemName": "手工水餃(10顆)",
+    "price": 90,
+    "description": "高麗菜豬肉餡多汁鮮甜。",
+    "imgUrl": "https://example.com/img/dumplings.jpg",
+    "isAvailable": true,
+    "tag": "主食"
+  },
+  {
+    "_id": "66f1a0c1a2b4d90123456709",
+    "itemName": "桂花酸梅湯",
+    "price": 50,
+    "description": "傳統解膩消暑飲品。",
+    "imgUrl": "https://example.com/img/plum-drink.jpg",
+    "isAvailable": true,
+    "tag": "飲品"
+  },
+  {
+    "_id": "66f1a0c1a2b4d9012345670a",
+    "itemName": "芋泥銀耳甜湯",
+    "price": 65,
+    "description": "綿滑芋泥搭配銀耳與枸杞。",
+    "imgUrl": "https://example.com/img/dessert-soup.jpg",
+    "isAvailable": false,
+    "tag": "甜品"
+  }
+]
