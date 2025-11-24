@@ -91,7 +91,7 @@
                         <input type="email" v-model="editCustomer.email">
                     </div>
                     <div class="modal-actions">
-                        <button type="submit">儲存</button>
+                        <button type="submit" @click="updateUserInfo">儲存</button>
                         <button type="button" @click="closeUserModal">關閉</button>
                     </div>
                 </form>
@@ -196,11 +196,23 @@
             toggleSidebar() { this.sidebarOpen = !this.sidebarOpen; },
             openUserModal() { this.editCustomer = { ...this.customer }; this.userModalOpen = true; },
             closeUserModal() { this.userModalOpen = false; },
-            updateUser() {
-                this.$store.dispatch('user/updateCustomer', this.editCustomer);
-                this.closeUserModal();
-                alert("使用者資訊已更新！");
-                // TODO: call API to save user info
+            async updateUserInfo() {
+                try {
+                    const userId = this.editCustomer.id;
+                    const updates = { ...this.editCustomer };
+                    delete updates.id;
+
+                    console.log('Sending updates:', userId, updates); // ✅
+
+                    const result = await this.$store.dispatch('user/updateUser', { userId, updates });
+
+                    console.log('Update result:', result); // ✅
+                    alert('使用者資訊已更新！');
+                    this.closeUserModal();
+                } catch (err) {
+                    console.error(err);
+                    alert('更新失敗，請稍後再試: ' + err.message);
+                }
             },
             
             onAvatarChange(event) {
