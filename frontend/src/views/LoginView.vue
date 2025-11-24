@@ -75,11 +75,13 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useStore } from 'vuex'
 
 const router = useRouter()
 const account = ref('')
 const password = ref('')
 const role = ref('buyer') // 預設選擇顧客，對應enum: buyer/owner/admin
+const store = useStore()
 
 
 const handleRegister =() =>{
@@ -94,6 +96,12 @@ const handleLogin = () => {
   
   console.log('登入數據:', loginData)
   console.log('選擇的角色（僅供前端參考）:', role.value)
+
+  // 將登入資訊存入 Vuex
+  store.dispatch('user/login', loginData)
+
+  // 同時存入 localStorage，刷新頁面仍能保持登入
+  localStorage.setItem('user', JSON.stringify(loginData))
   
   alert('登入成功！')
   router.push('/home')
