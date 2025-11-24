@@ -100,39 +100,63 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+    import { ref } from 'vue'
+    import { useRouter } from 'vue-router'
+    import { useStore } from 'vuex'
 
-const router = useRouter()
-const account = ref('')
-const password = ref('')
-const confirmPassword = ref('')
-const email = ref('')
-const nickname = ref('')
-const phone = ref('')
-const role = ref('buyer') // 預設選擇顧客，對應後端 enum: buyer/owner/admin
+    const router = useRouter()
+    const store = useStore()
 
-const handleRegister = () => {
-  if (password.value !== confirmPassword.value) {
-    alert('密碼與確認密碼不一致，請重新輸入')
-    return
-  }
-  
-  const registerData = {
-    account: account.value,
-    password: password.value,
-    email: email.value,
-    nickname: nickname.value,
-    phone: phone.value,
-    role: role.value,
-    photo: '' 
-  }
-  
-  console.log('註冊數據:', registerData)
-  
-  alert('暫時先讓你註冊')
-  router.push('/login')
-}
+    const account = ref('')
+    const password = ref('')
+    const confirmPassword = ref('')
+    const email = ref('')
+    const nickname = ref('')
+    const phone = ref('')
+    const role = ref('buyer') // 預設選擇顧客，對應後端 enum: buyer/owner/admin
+
+    const handleRegister = async () => {
+        if (password.value !== confirmPassword.value) {
+            alert('密碼與確認密碼不一致，請重新輸入')
+            return
+        }
+
+        const registerData = {
+            account: account.value,
+            password: password.value,
+            email: email.value,
+            nickname: nickname.value,
+            phone: phone.value,
+            role: role.value,
+            photo: ''
+        }
+
+        try {
+            const response = await fetch('http://localhost:8088/api/users/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(registerData)
+            })
+
+            if (!response.ok) {
+                const err = await response.json()
+                throw new Error(err.message || '註冊失敗')
+            }
+
+            const data = await response.json()
+
+            // 更新 Vuex 狀態
+            store.commit('customer/UPDATE_CUSTOMER', data)
+            store.commit('customer/LOGIN')
+
+            alert('註冊成功！')
+            router.push('/login')
+
+        } catch (err) {
+            console.error('註冊錯誤:', err)
+            alert(`註冊失敗: ${err.message}`)
+        }
+    }
 
 const backToLogin = () => {
   router.push('/login')
