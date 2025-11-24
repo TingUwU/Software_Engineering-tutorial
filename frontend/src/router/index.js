@@ -7,17 +7,34 @@ import LoginView from '@/views/LoginView.vue';
 import RegisterView from '@/views/RegisterView.vue';
 import FavoriteView from '@/views/FavoriteView.vue';
 const routes = [
-    { path: '/', name: 'Home', component: HomeView },
+    { path: '/', redirect: '/login' },
+    { path: '/login', component: LoginView },
+    { path: '/home', component: HomeView, meta: { requiresAuth: true } },
     { path: '/cart', name: 'Cart', component: CartView },
     { path: '/shop/:id', name: 'ShopView', component: ShopView, props: true },
-    { path: '/login', name: 'Login', component: LoginView },
     { path: '/register', name: 'Register', component: RegisterView },
     { path: '/favorite', name: 'Favorite', component: FavoriteView },
 ];
 
 const router = createRouter({
-    history: createWebHistory(process.env.BASE_URL),
-    routes,
-});
+    history: createWebHistory(),
+    routes
+})
 
-export default router;
+// 導航守衛：未登入就導向 login
+import store from '@/store'
+
+router.beforeEach((to, from, next) => {
+    const isLoggedIn = store.state.user.isLoggedIn || !!localStorage.getItem('user')
+
+    if (to.meta.requiresAuth && !isLoggedIn) {
+        next('/login')  // 需要登入但未登入 → 導向 /login
+    } else if (to.path === '/login' && isLoggedIn) {
+        next('/home')   // 已登入 → 導向 /home
+    } else {
+        next()
+    }
+})
+
+
+export default router
