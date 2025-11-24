@@ -102,7 +102,7 @@
                         <input type="email" v-model="editCustomer.email">
                     </div>
                     <div class="modal-actions">
-                        <button type="submit">儲存</button>
+                        <button type="submit" @click="updateUserInfo">儲存</button>
                         <button type="button" @click="closeUserModal">關閉</button>
                     </div>
                 </form>
@@ -170,16 +170,23 @@
             closeUserModal() {
                 this.userModalOpen = false;
             },
-            updateUserInfo() {
-                this.$store.dispatch('user/updateUser', this.editCustomer)
-                    .then(() => {
-                        alert('使用者資訊已更新！');
-                        this.closeUserModal();
-                    })
-                    .catch(err => {
-                        console.error(err);
-                        alert('更新失敗，請稍後再試: ' + err.message);
-                    });
+            async updateUserInfo() {
+                try {
+                    const userId = this.editCustomer.id;
+                    const updates = { ...this.editCustomer };
+                    delete updates.id;
+
+                    console.log('Sending updates:', userId, updates); // ✅
+
+                    const result = await this.$store.dispatch('user/updateUser', { userId, updates });
+
+                    console.log('Update result:', result); // ✅
+                    alert('使用者資訊已更新！');
+                    this.closeUserModal();
+                } catch (err) {
+                    console.error(err);
+                    alert('更新失敗，請稍後再試: ' + err.message);
+                }
             },
             scrollLeft(type) {
                 const slider = type === 'chinese' ? this.$refs.chineseSlider : this.$refs.westernSlider;
