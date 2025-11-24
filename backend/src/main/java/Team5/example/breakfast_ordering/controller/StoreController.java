@@ -6,11 +6,10 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.http.HttpStatus;
 
 import java.util.List;
-import java.util.ArrayList;
-import java.util.stream.Collectors;
 
 import Team5.example.breakfast_ordering.model.Store;
 import Team5.example.breakfast_ordering.repository.StoreRepository;
+import Team5.example.breakfast_ordering.service.StoreService;
 
 @RestController
 @RequestMapping("/api/stores")
@@ -18,27 +17,29 @@ import Team5.example.breakfast_ordering.repository.StoreRepository;
 public class StoreController {
     @Autowired
     private StoreRepository storeRepository;
+    @Autowired
+    private StoreService storeService;
 
-    // 回傳 ID 為 storeId 的店家
-    @GetMapping("/{storeId}")
-    public Store getStoreDetails(@PathVariable String storeId){
-        Store store = storeRepository.findById(storeId)
-        .orElseThrow(() -> new RuntimeException("找不到該店家 ID: " + storeId));
-      
-    // 回傳在 ID 為 storeId 的店家中、名字包含 keyword 的商品
-    @GetMapping("/{storeId}/search-product")
-    public List<Store.MenuItem> searchProductInStore(@PathVariable String storeId, @PathVariable String keyword){
-        Store store = storeRepository.findById(storeId).
-        orElseThrow( () -> new RuntimeException("找不到該店家 ID: " + storeId));
+    // // 回傳 ID 為 storeId 的店家
+    // @GetMapping("/{storeId}")
+    // public Store getStoreDetails(@PathVariable String storeId){
+    //     Store store = storeRepository.findById(storeId)
+    //     .orElseThrow(() -> new RuntimeException("找不到該店家 ID: " + storeId));
 
-        if(store.getMenu() == null){
-            return new ArrayList<>();
-        }
+    // // 回傳在 ID 為 storeId 的店家中、名字包含 keyword 的商品
+    // @GetMapping("/{storeId}/search-product")
+    // public List<Store.MenuItem> searchProductInStore(@PathVariable String storeId, @PathVariable String keyword){
+    //     Store store = storeRepository.findById(storeId).
+    //     orElseThrow( () -> new RuntimeException("找不到該店家 ID: " + storeId));
 
-        return store.getMenu().stream()
-               .filter(item -> item.getItemName() != null && item.getItemName().contains(keyword))
-               .collect(Collectors.toList());
-    }
+    //     if(store.getMenu() == null){
+    //         return new ArrayList<>();
+    //     }
+
+    //     return store.getMenu().stream()
+    //            .filter(item -> item.getItemName() != null && item.getItemName().contains(keyword))
+    //            .collect(Collectors.toList());
+    // }
 
     // 創建新店家
     @PostMapping
@@ -79,7 +80,5 @@ public class StoreController {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body("STORE_NOT_FOUND");
             return ResponseEntity.badRequest().body(e.getMessage());
         }
-    }
-        return store;
     }
 }

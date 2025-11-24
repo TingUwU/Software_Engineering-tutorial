@@ -22,7 +22,8 @@ export default {
         }
       ],
       customCombos: [],
-      updatedAt: new Date()
+      updatedAt: new Date(),
+      isLoggedIn: false
     }
   },
   getters: {
@@ -85,7 +86,27 @@ export default {
           }
         }
       }
-    }
+    },
+    LOGIN(state) {
+          state.isLoggedIn = true
+    },
+      LOGOUT(state) {
+          state.isLoggedIn = false
+          state.customer = {
+              id: "",
+              account: "",
+              password: "",
+              nickname: "",
+              role: "buyer",
+              photo: "",
+              phone: "",
+              email: "",
+              favorStores: [],
+              favorItems: [],
+              customCombos: [],
+              updatedAt: new Date()
+          }
+      }
   },
   actions: {
     // 切換店家收藏狀態
@@ -109,8 +130,34 @@ export default {
       }
     },
     // 更新用戶資料
-    updateCustomer({ commit }, customer) {
-      commit('UPDATE_CUSTOMER', customer)
+      updateUser({ commit }, editCustomer) {
+          return fetch(`http://localhost:8080/api/users/${editCustomer.id}`, {
+              method: 'PATCH',
+              headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${localStorage.getItem('token')}`
+              },
+              body: JSON.stringify(editCustomer)
+          })
+              .then(response => {
+                  if (!response.ok) {
+                      return response.json().then(err => {
+                          throw new Error(err.message || '更新失敗');
+                      });
+                  }
+                  return response.json();
+              })
+              .then(data => {
+                  commit('UPDATE_CUSTOMER', data);
+                  return data;
+              });
+      },
+    login({ commit }, customer) {
+          commit('UPDATE_CUSTOMER', customer)
+          commit('LOGIN')
+    },
+    logout({ commit }) {
+          commit('LOGOUT')
     }
   }
 }
