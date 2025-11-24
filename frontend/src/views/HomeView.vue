@@ -16,6 +16,9 @@
                 <li>歷史</li>
                 <li>收藏</li>
             </ul>
+            <div class="sidebar-logout">
+                <button @click="logout">登出</button>
+            </div>
         </div>
 
         <!-- 左上角顧客頭像 -->
@@ -167,10 +170,16 @@
             closeUserModal() {
                 this.userModalOpen = false;
             },
-            updateUser() {
-                this.$store.dispatch('user/updateCustomer', this.editCustomer);
-                this.closeUserModal();
-                alert('使用者資訊已更新！');
+            updateUserInfo() {
+                this.$store.dispatch('user/updateUser', this.editCustomer)
+                    .then(() => {
+                        alert('使用者資訊已更新！');
+                        this.closeUserModal();
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        alert('更新失敗，請稍後再試: ' + err.message);
+                    });
             },
             scrollLeft(type) {
                 const slider = type === 'chinese' ? this.$refs.chineseSlider : this.$refs.westernSlider;
@@ -200,6 +209,12 @@
                     };
                     reader.readAsDataURL(file);
                 }
+            },
+            logout() {
+                this.$store.dispatch('user/logout'); // 呼叫 Vuex logout
+                localStorage.removeItem('token');    // 如果有 token
+                localStorage.removeItem('user');
+                this.$router.push('/login');         // 導向登入頁
             }
         }
     };
@@ -559,4 +574,25 @@
             width: 28px;
             height: 28px;
         }
+
+    .sidebar-logout {
+        margin-top: auto; /* 推到底部 */
+        width: 100%;
+    }
+
+        .sidebar-logout button {
+            width: 100%;
+            padding: 10px 0;
+            background-color: #fff;
+            color: black;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+            .sidebar-logout button:hover {
+                background-color: #0069D9;
+            }
+
 </style>
