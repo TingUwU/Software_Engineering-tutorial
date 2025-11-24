@@ -16,6 +16,9 @@
                 <li>歷史</li>
                 <li>收藏</li>
             </ul>
+            <div class="sidebar-logout">
+                <button @click="logout">登出</button>
+            </div>
         </div>
 
         <!-- 左上角顧客頭像 -->
@@ -268,6 +271,12 @@
                     }
                 });
                 // TODO: call API to save favorItems
+            },
+            logout() {
+                this.$store.dispatch('user/logout'); // 呼叫 Vuex logout
+                localStorage.removeItem('token');    // 如果有 token
+                localStorage.removeItem('user');
+                this.$router.push('/login');         // 導向登入頁
             }
         }
     }
@@ -686,4 +695,23 @@
     .favorite-btn.active span {
         color: red; /* 已收藏顯示紅色 */
     }
+    .sidebar-logout {
+        margin-top: auto; /* 推到底部 */
+        width: 100%;
+    }
+
+        .sidebar-logout button {
+            width: 100%;
+            padding: 10px 0;
+            background-color: #fff;
+            color: black;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+            .sidebar-logout button:hover {
+                background-color: #0069D9;
+            }
 </style>
