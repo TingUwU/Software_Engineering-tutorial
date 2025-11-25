@@ -14,7 +14,7 @@
         <router-link to="/cart"><li>購物車</li></router-link>
         <li>訂單管理</li>
         <li>歷史</li>
-        <li>收藏</li>
+        <router-link to="/favorite"><li>收藏</li></router-link>
       </ul>
       <div class="sidebar-logout">
         <button @click="logout">登出</button>
