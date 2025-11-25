@@ -4,6 +4,7 @@
   "phone": "02-2345-6789",
   "email": "breakfast-shop@example.com",
   "address": "106台北市大安區復興南路一段390號",
+  "category": "早餐店",
   "coordinates": [
     121.544,
     25.042

@@ -8,7 +8,7 @@ import org.bson.types.ObjectId;
 @Document(collection = "store")
 public class Store {
     @Id
-    private String id;
+    private ObjectId id;
     private String name;
     private String description;
     private String phone;
@@ -23,8 +23,8 @@ public class Store {
     private List<MenuItem> menu;
 
     // Getters and Setters
-    public String getId() { return id; }
-    public void setId(String id) { this.id = id; }
+    public ObjectId getId() { return id; }
+    public void setId(ObjectId id) { this.id = id; }
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
@@ -85,7 +85,7 @@ public class Store {
 
     // MenuItem
     public static class MenuItem {
-        private String id;
+        private ObjectId id;
         private String itemName;
         private Double price;
         private String description;
@@ -93,8 +93,8 @@ public class Store {
         private Boolean isAvailable;
         private String tag;
 
-        public String getId() { return id; }
-        public void setId(String id) { this.id = id; }
+        public ObjectId getId() { return id; }
+        public void setId(ObjectId id) { this.id = id; }
         public String getItemName() { return itemName; }
         public void setItemName(String itemName) { this.itemName = itemName; }
         public Double getPrice() { return price; }

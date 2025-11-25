@@ -52,8 +52,8 @@ public class StoreService {
         if (userId == null || !userId.equals(store.getOwnerId())) throw new SecurityException("FORBIDDEN");
         if (menu != null) {
             for (Store.MenuItem mi : menu) {
-                if (mi.getId() == null || mi.getId().isBlank()) {
-                    mi.setId(new ObjectId().toString());
+                if (mi.getId() == null) {
+                    mi.setId(new ObjectId());
                 }
             }
         }
