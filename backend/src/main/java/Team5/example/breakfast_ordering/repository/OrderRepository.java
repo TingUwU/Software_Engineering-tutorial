@@ -12,8 +12,7 @@ public interface OrderRepository extends MongoRepository<Order, String> {
     List<Order> findByCustomerId(String customerId);
 
     // 2. 找出某個店家的所有訂單 (商家管理後台用)
-    List<Order> findByStoreId(String storeId);
-    
+    List<Order> findByStoreIdOrderByCreateAtDesc(String storeId);    
     // 3. 找出某個店家且狀態為「已送出」的訂單 (商家接單用)
     List<Order> findByStoreIdAndState(String storeId, String state);
 }

@@ -26,4 +26,18 @@ public class OrderController {
     public List<Order> getCustomerOrders(@PathVariable String customerId) {
         return orderService.getOrdersByCustomer(customerId);
     }
+
+    // 【新增】API: 商家查詢訂單 (GET /api/orders/store/{storeId})
+    @GetMapping("/store/{storeId}")
+    public List<Order> getStoreOrders(@PathVariable String storeId) {
+        return orderService.getOrdersByStore(storeId);
+    }
+
+    // 【新增】API: 更新訂單狀態 (PATCH /api/orders/{id})
+    // Body: { "state": "已接單" }
+    @PatchMapping("/{id}")
+    public Order updateOrderState(@PathVariable String id, @RequestBody Map<String, String> payload) {
+        String newState = payload.get("state");
+        return orderService.updateOrderState(id, newState);
+    }
 }
