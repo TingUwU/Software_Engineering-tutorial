@@ -26,8 +26,8 @@ export default {
     isLoggedIn: state => state.customer.isLoggedIn,
     isStoreFavorited: state => storeId => state.customer.favorStores.includes(storeId),
     isItemFavorited: state => (storeId, itemId) => {
-      const storeItem = state.customer.favorItems.find(item => item.storeId === storeId)
-      return storeItem ? storeItem.itemId.includes(itemId) : false
+      const storeItem = state.customer.favorItems.find(item => item.storeId === storeId && item.itemId === itemId)
+      return !!storeItem
     }
   },
   mutations: {
@@ -121,11 +121,27 @@ export default {
     // 收藏店家
     async toggleFavorStore({ commit, state }, storeId) {
       const userId = state.customer.id
+      console.log('Toggle Favor Store - userId:', userId, 'storeId:', storeId)
+      
+      if (!userId) {
+        throw new Error('用戶未登入或用戶ID不存在')
+      }
+      
       const exists = state.customer.favorStores.includes(storeId)
       const url = `${API_URL}/${userId}/favorite-stores/${storeId}`
+      console.log('Request URL:', url, 'Method:', exists ? 'DELETE' : 'POST')
+      
       const res = await fetch(url, { method: exists ? 'DELETE' : 'POST' })
-      if (!res.ok) throw new Error('操作失敗')
+      console.log('Response status:', res.status)
+      
+      if (!res.ok) {
+        const errorText = await res.text()
+        console.error('Error response:', errorText)
+        throw new Error(`操作失敗 (${res.status}): ${errorText}`)
+      }
+      
       const data = await res.json()
+      console.log('Success, updated data:', data)
       commit('UPDATE_CUSTOMER', data)
       return !exists
     },
@@ -133,12 +149,27 @@ export default {
     // 收藏商品
     async toggleFavorItem({ commit, state }, { storeId, itemId }) {
       const userId = state.customer.id
-      const storeItem = state.customer.favorItems.find(item => item.storeId === storeId)
-      const exists = storeItem ? storeItem.itemId.includes(itemId) : false
+      console.log('Toggle Favor Item - userId:', userId, 'storeId:', storeId, 'itemId:', itemId)
+      
+      if (!userId) {
+        throw new Error('用戶未登入或用戶ID不存在')
+      }
+      
+      const exists = state.customer.favorItems.some(item => item.storeId === storeId && item.itemId === itemId)
       const url = `${API_URL}/${userId}/favorite-items/${storeId}/${itemId}`
+      console.log('Request URL:', url, 'Method:', exists ? 'DELETE' : 'POST')
+      
       const res = await fetch(url, { method: exists ? 'DELETE' : 'POST' })
-      if (!res.ok) throw new Error('操作失敗')
+      console.log('Response status:', res.status)
+      
+      if (!res.ok) {
+        const errorText = await res.text()
+        console.error('Error response:', errorText)
+        throw new Error(`操作失敗 (${res.status}): ${errorText}`)
+      }
+      
       const data = await res.json()
+      console.log('Success, updated data:', data)
       commit('UPDATE_CUSTOMER', data)
       return !exists
     },

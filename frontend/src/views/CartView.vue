@@ -123,7 +123,7 @@
             </label>
           </div>
           <div class="time-setting" v-if="orderType==='內用'">
-            桌號: <input type="text" v-model="tableNumber" placeholder="桌號"/>
+            桌號: <input type="text" v-model="tableNumber" placeholder="請輸入桌號"/>
           </div>
           <div class="time-setting" v-if="orderType==='外帶'">
             取餐時間: <input type="time" v-model="takeoutTime"/>
@@ -170,7 +170,7 @@ const orderType = ref('外帶')
 const tableNumber = ref('')
 const takeoutTime = ref(null)
 const customerPhone = ref('')
-const paymentMethod = ref('店內付款')
+const paymentMethod = ref('')
 
 // Cart computed
 const cart = computed(() => ({
@@ -232,6 +232,23 @@ const updateUserInfo = async () => {
 
 const checkout = () => {
   if (!cart.value.items.length) return alert('購物車是空的')
+  
+  // 驗證必填欄位
+  if (orderType.value === '內用') {
+    if (!tableNumber.value || tableNumber.value.trim() === '') {
+      return alert('請填寫桌號')
+    }
+  } else if (orderType.value === '外帶') {
+    if (!takeoutTime.value || takeoutTime.value.trim() === '') {
+      return alert('請填寫取餐時間')
+    }
+  }
+  
+  // 驗證付款方式
+  if (!paymentMethod.value || paymentMethod.value.trim() === '') {
+    return alert('請選擇付款方式')
+  }
+  
   const orderData = {
     storeId: store.state.cart.storeId,
     customerId: customer.value.id || null,

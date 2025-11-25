@@ -146,8 +146,8 @@
             const data = await response.json()
 
             // 更新 Vuex 狀態
-            store.commit('customer/UPDATE_CUSTOMER', data)
-            store.commit('customer/LOGIN')
+            store.commit('user/UPDATE_CUSTOMER', data)
+            store.commit('user/LOGIN')
 
             alert('註冊成功！')
             router.push('/login')
