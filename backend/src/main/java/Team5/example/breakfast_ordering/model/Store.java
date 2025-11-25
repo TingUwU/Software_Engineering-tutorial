@@ -5,7 +5,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 import java.util.List;
 import org.bson.types.ObjectId;
 
-@Document(collection = "stores")
+@Document(collection = "store")
 public class Store {
     @Id
     private String id;
@@ -14,6 +14,7 @@ public class Store {
     private String phone;
     private String email;
     private String address;
+    private String category;
     private List<Double> coordinates;
     private List<BusinessHour> businessHours;
     private boolean isActive;
@@ -39,6 +40,9 @@ public class Store {
 
     public String getAddress() { return address; }
     public void setAddress(String address) { this.address = address; }
+
+    public String getCategory() { return category; }
+    public void setCategory(String category) { this.category = category; }
 
     public List<Double> getCoordinates() { return coordinates; }
     public void setCoordinates(List<Double> coordinates) { this.coordinates = coordinates; }
