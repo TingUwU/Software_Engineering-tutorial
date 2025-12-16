@@ -9,6 +9,7 @@ import FavoriteView from '@/views/FavoriteView.vue';
 import nologinhome from '@/views/nologinhome.vue';
 import nologincart from '@/views/nologincart.vue';
 import nologinshop from '@/views/nologinshop.vue';
+import OrderView from '@/views/OrderView.vue';
 const routes = [
     { path: '/', redirect: '/login' },
     { path: '/login', component: LoginView },
@@ -20,6 +21,7 @@ const routes = [
     { path: '/nologinhome', name: 'nologinhome', component: nologinhome },
     { path: '/nologincart', name: 'nologincart', component: nologincart },
     { path: '/nologinshop/:id', name: 'nologinshop', component: nologinshop, props: true },
+    { path: '/order', name: 'OrderView', component: OrderView },
 ];
 
 const router = createRouter({
