@@ -12,8 +12,7 @@
       <ul>
         <li @click="openUserModal">使用者資訊</li>
         <router-link to="/cart"><li>購物車</li></router-link>
-        <li>訂單管理</li>
-        <li>歷史</li>
+        <router-link to="/order"><li>訂單管理</li></router-link>
         <router-link to="/favorite"><li>收藏</li></router-link>
       </ul>
       <div class="sidebar-logout">
@@ -230,25 +229,20 @@ const updateUserInfo = async () => {
   }
 }
 
-const checkout = () => {
+const checkout = async () => {
   if (!cart.value.items.length) return alert('購物車是空的')
-  
+
   // 驗證必填欄位
-  if (orderType.value === '內用') {
-    if (!tableNumber.value || tableNumber.value.trim() === '') {
-      return alert('請填寫桌號')
-    }
-  } else if (orderType.value === '外帶') {
-    if (!takeoutTime.value || takeoutTime.value.trim() === '') {
-      return alert('請填寫取餐時間')
-    }
+  if (orderType.value === '內用' && (!tableNumber.value || tableNumber.value.trim() === '')) {
+    return alert('請填寫桌號')
+  } else if (orderType.value === '外帶' && (!takeoutTime.value || takeoutTime.value.trim() === '')) {
+    return alert('請填寫取餐時間')
   }
-  
-  // 驗證付款方式
+
   if (!paymentMethod.value || paymentMethod.value.trim() === '') {
     return alert('請選擇付款方式')
   }
-  
+
   const orderData = {
     storeId: store.state.cart.storeId,
     customerId: customer.value.id || null,
@@ -256,13 +250,32 @@ const checkout = () => {
     orderType: orderType.value,
     dineInDetail: orderType.value === '內用' ? { tableNumber: tableNumber.value } : null,
     takeoutDetail: orderType.value === '外帶' ? { takeoutTime: takeoutTime.value } : null,
-    items: cart.value.items,
+    items: cart.value.items.map(item => ({
+      menuItemId: item.menuItemId,
+      itemName: item.itemName,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      customization: item.customization,
+      itemSubTotal: item.itemSubTotal
+    })),
     totalAmount: cart.value.totalAmount,
     remarks: remarks.value,
     paymentMethod: paymentMethod.value
   }
-  console.log('準備送出的訂單數據:', orderData)
-  alert('訂單數據已準備完成，請查看控制台')
+
+  try {
+    // 使用 Vuex order store 建立訂單
+    const createdOrder = await store.dispatch('order/createOrder', orderData)
+
+    // 清空購物車
+    store.dispatch('cart/clearCart')
+
+    // 跳轉到訂單頁面，帶參數 orderId
+    router.push({ name: 'OrderView', query: { orderId: createdOrder.id } })
+  } catch (err) {
+    console.error(err)
+    alert('訂單建立失敗，請稍後再試: ' + err.message)
+  }
 }
 </script>
 
@@ -338,7 +351,7 @@ const checkout = () => {
 .sidebar-avatar { width:50px; height:50px; border-radius:50%; }
 .username { color:#fff; font-weight:bold; }
 .sidebar ul { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:15px; }
-.sidebar li { color:#fff; cursor:pointer; padding:10px 0; border-radius:4px; }
+.sidebar li { color:#fff; cursor:pointer; padding:10px 0; border-radius:4px; text-align: left;}
 .sidebar li:hover { background:#001633; }
 .sidebar-logout { margin-top:auto; }
 .sidebar-logout button { width:100%; padding:10px 0; background:#fff; color:black; border:none; border-radius:6px; cursor:pointer; }
