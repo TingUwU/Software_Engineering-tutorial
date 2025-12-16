@@ -109,8 +109,8 @@ const handleLogin = () => {
 
 const skipLogin = () => {
   // 跳過登入，直接進入主頁
-  alert('頁面未實作')
-  //router.push('/menu')
+  alert('訪客模式')
+  router.push('/nologinhome')
 }
 
 const loginWithGoogle = () => {
