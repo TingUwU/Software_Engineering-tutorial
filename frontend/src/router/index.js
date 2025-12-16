@@ -6,6 +6,9 @@ import CartView from '@/views/CartView.vue';
 import LoginView from '@/views/LoginView.vue';
 import RegisterView from '@/views/RegisterView.vue';
 import FavoriteView from '@/views/FavoriteView.vue';
+import nologinhome from '@/views/nologinhome.vue';
+import nologincart from '@/views/nologincart.vue';
+import nologinshop from '@/views/nologinshop.vue';
 const routes = [
     { path: '/', redirect: '/login' },
     { path: '/login', component: LoginView },
@@ -14,6 +17,9 @@ const routes = [
     { path: '/shop/:id', name: 'ShopView', component: ShopView, props: true },
     { path: '/register', name: 'Register', component: RegisterView },
     { path: '/favorite', name: 'Favorite', component: FavoriteView },
+    { path: '/nologinhome', name: 'nologinhome', component: nologinhome },
+    { path: '/nologincart', name: 'nologincart', component: nologincart },
+    { path: '/nologinshop/:id', name: 'nologinshop', component: nologinshop, props: true },
 ];
 
 const router = createRouter({
