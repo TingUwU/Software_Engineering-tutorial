@@ -10,6 +10,7 @@ import nologinhome from '@/views/nologinhome.vue';
 import nologincart from '@/views/nologincart.vue';
 import nologinshop from '@/views/nologinshop.vue';
 import OrderView from '@/views/OrderView.vue';
+import StoreSetting from'@/views/StoreSetting.vue';
 const routes = [
     { path: '/', redirect: '/login' },
     { path: '/login', component: LoginView },
@@ -22,6 +23,7 @@ const routes = [
     { path: '/nologincart', name: 'nologincart', component: nologincart },
     { path: '/nologinshop/:id', name: 'nologinshop', component: nologinshop, props: true },
     { path: '/order', name: 'OrderView', component: OrderView },
+    { path: '/store-setting', name: 'StoreSetting', component: StoreSetting },
 ];
 
 const router = createRouter({

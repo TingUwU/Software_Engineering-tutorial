@@ -19,16 +19,24 @@ public class UserController {
     private UserRepository userRepository;
 
     // 註冊
-    @PostMapping("/register")
+   @PostMapping("/register")
     public User register(@Valid @RequestBody User user){
         if(userRepository.existsByAccount(user.getAccount())){
             throw new RuntimeException("帳號已存在");
         }
 
+        // 驗證角色是否有效（必須是 buyer 或 owner）
+        if(user.getRole() == null || user.getRole().isBlank()){
+            throw new RuntimeException("請選擇身份（顧客或店家）");
+        }
+        if(!user.getRole().equals("buyer") && !user.getRole().equals("owner")){
+            throw new RuntimeException("身份選擇無效，請選擇顧客或店家");
+        }
+
         return userRepository.save(user);
     }
 
-    // 登入
+      // 登入
     @PostMapping("/login")
     public User login(@RequestBody User loginRequest){
         User user = userRepository.findByAccount(loginRequest.getAccount())
@@ -36,6 +44,15 @@ public class UserController {
 
         if(!user.getPassword().equals(loginRequest.getPassword())){  // 密碼尚未加密，待更改
             throw new RuntimeException("密碼錯誤");
+        }
+
+        // 驗證前端選擇的角色是否與數據庫中的角色一致
+        if(loginRequest.getRole() == null || loginRequest.getRole().isBlank()){
+            throw new RuntimeException("請選擇身份（顧客或店家）");
+        }
+        if(!user.getRole().equals(loginRequest.getRole())){
+            throw new RuntimeException("身份選擇錯誤，該帳號註冊時選擇的是" + 
+                (user.getRole().equals("owner") ? "店家" : "顧客"));
         }
 
         return user;

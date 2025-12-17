@@ -91,7 +91,8 @@ const handleRegister =() =>{
 const handleLogin = async () => {
   const loginData = {
     account: account.value,
-    password: password.value
+    password: password.value,
+    role: role.value
   }
   
   console.log('登入數據:', loginData)
@@ -115,7 +116,7 @@ const handleLogin = async () => {
   } catch (error) {
     // 登入失敗時顯示錯誤訊息
     console.error('登入錯誤:', error)
-    alert(`登入失敗：${ '帳號或密碼錯誤'}`)
+    alert(`登入失敗：${ error.message}`)
   }
 }
 
