@@ -27,10 +27,6 @@
     <div class="shop-header">
       <h2 class="shop-name">{{ shop.name }}</h2>
 
-      <!-- 收藏（訪客提示登入） -->
-      <button class="favorite-btn" @click="needLogin">
-        🤍
-      </button>
     </div>
 
     <!-- 店家資訊 -->
@@ -91,22 +87,29 @@
     </section>
 
     <!-- 右下角購物車 -->
-    <router-link to="/nologincart" class="cart-btn">🛒</router-link>
+    <router-link to="/nologincart" class="cart-btn">
+      <svg xmlns="http://www.w3.org/2000/svg"
+                 fill="none" stroke="white" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round"
+                 width="24" height="24">
+                <circle cx="9" cy="21" r="1"/>
+                <circle cx="20" cy="21" r="1"/>
+                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+            </svg>
+    </router-link>
 
     <!-- MenuItem Modal -->
     <MenuItem
       :show="menuItemModalOpen"
       :product="selectedProduct"
-      :isFavorited="false"
       @close="closeMenuItem"
       @add-to-cart="handleAddToCart"
-      @toggle-favorite="needLogin"
     />
   </div>
 </template>
 
 <script>
-import MenuItem from '@/components/MenuItem.vue'
+import MenuItem from '@/components/nologinMenuItem.vue'
 
 export default {
   components: { MenuItem },
@@ -328,13 +331,6 @@ export default {
         font-size: 28px;
         font-weight: bold;
         color: #0069D9; /* 藍色 */
-    }
-
-    .favorite-btn {
-        background: none;
-        border: none;
-        font-size: 24px;
-        cursor: pointer;
     }
 
     /* 店家資訊 */
@@ -593,38 +589,6 @@ export default {
         line-height: 56px;
     }
 
-    .favorite-btn {
-        background: none;
-        border: none;
-        font-size: 24px;
-        cursor: pointer;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        transition: transform 0.2s;
-    }
-
-        .favorite-btn.animate {
-            animation: pop 0.3s ease forwards;
-        }
-
-    @keyframes pop {
-        0% {
-            transform: scale(1);
-        }
-
-        50% {
-            transform: scale(1.5);
-        }
-
-        100% {
-            transform: scale(1);
-        }
-    }
-
-    .favorite-btn.active span {
-        color: red; /* 已收藏顯示紅色 */
-    }
     .sidebar-logout {
         margin-top: auto; /* 推到底部 */
         width: 100%;
