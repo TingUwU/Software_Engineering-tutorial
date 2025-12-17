@@ -88,7 +88,7 @@ const handleRegister =() =>{
     console.log('註冊')
     router.push('/register')
 }
-const handleLogin = () => {
+const handleLogin = async () => {
   const loginData = {
     account: account.value,
     password: password.value
@@ -97,14 +97,26 @@ const handleLogin = () => {
   console.log('登入數據:', loginData)
   console.log('選擇的角色（僅供前端參考）:', role.value)
 
-  // 將登入資訊存入 Vuex
-  store.dispatch('user/login', loginData)
-
-  // 同時存入 localStorage，刷新頁面仍能保持登入
-  localStorage.setItem('user', JSON.stringify(loginData))
-  
-  alert('登入成功！')
-  router.push('/home')
+  try {
+    // 將登入資訊存入 Vuex，並等待後端回應
+    const userData = await store.dispatch('user/login', loginData)
+    
+    // 同時存入 localStorage，刷新頁面仍能保持登入
+    localStorage.setItem('user', JSON.stringify(userData))
+    
+    alert('登入成功！')
+    
+    if (userData.role === 'owner') {
+      router.push('/store-setting')
+    } else if (userData.role === 'buyer') {
+      router.push('/home')
+    } 
+    
+  } catch (error) {
+    // 登入失敗時顯示錯誤訊息
+    console.error('登入錯誤:', error)
+    alert(`登入失敗：${ '帳號或密碼錯誤'}`)
+  }
 }
 
 const skipLogin = () => {
