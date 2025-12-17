@@ -1,65 +1,82 @@
 <template>
-    <div id="app">
-        <nav>
-            <router-link to="/">
-                <img class="avatar"
-                     :src="require('@/assets/logo.png')"
-                     alt="logo">
-                早一點
-            </router-link>
-        </nav>
+  <div id="app">
+    <nav>
+      <img class="avatar"
+           :src="require('@/assets/logo.png')"
+           alt="logo"
+           @click="goHome">
+      <span class="logo-text" @click="goHome">早一點</span>
+    </nav>
 
-        <!-- HomeView.vue 會在這裡渲染 -->
-        <router-view />
-    </div>
+    <!-- HomeView.vue 或其他頁面會在這裡渲染 -->
+    <router-view />
+  </div>
 </template>
 
 <script>
-    export default {
-        data() {
-            return {
-                customer: {
-                    photo: null
-                }
-            };
-        }
+import { useRouter } from 'vue-router';
+import { useStore } from 'vuex';
+
+export default {
+  setup() {
+    const router = useRouter();
+    const store = useStore();
+
+    const goHome = () => {
+      const isLoggedIn = store.state.user.isLoggedIn || !!localStorage.getItem('user');
+      if (isLoggedIn) {
+        router.push('/home');
+      } else {
+        router.push('/nologinhome');
+      }
     };
+
+    return { goHome };
+  }
+};
 </script>
 
 <style>
-    #app {
-        font-family: Avenir, Helvetica, Arial, sans-serif;
-        -webkit-font-smoothing: antialiased;
-        -moz-osx-font-smoothing: grayscale;
-        text-align: center;
-    }
+#app {
+  font-family: Avenir, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-align: center;
+}
 
-    nav {
-        padding: 30px;
-    }
+nav {
+  padding: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
 
-        nav a {
-            font-weight: bold;
-            color: #000; /* 黑色字 */
-            text-decoration: none; /* 去掉底線 */
-        }
+nav a, .logo-text {
+  font-weight: bold;
+  color: #000; /* 黑色字 */
+  text-decoration: none; /* 去掉底線 */
+  cursor: pointer;
+}
 
-            /* 當前頁面文字顯示藍色 */
-            nav a.router-link-exact-active {
-                color: #0069D9; /* 藍色 */
-            }
+nav a.router-link-exact-active {
+  color: #0069D9; /* 藍色 */
+}
 
-            nav a:hover {
-                color: #0069D9;
-            }
+nav a:hover, .logo-text:hover {
+  color: #0069D9;
+}
 
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  vertical-align: middle;
+  cursor: pointer;
+}
 
-    .avatar {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        vertical-align: middle;
-        margin-right: 10px;
-    }
+.logo-text {
+  font-size: 20px;
+  vertical-align: middle;
+}
 </style>
-
