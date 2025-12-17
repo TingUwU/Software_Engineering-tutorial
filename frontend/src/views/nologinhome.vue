@@ -45,6 +45,18 @@
                     <line x1="21" y1="21" x2="16.65" y2="16.65"/>
                 </svg>
             </button>
+            <ul
+                v-if="searchSuggestions.length"
+                class="search-suggestions"
+            >
+                <li
+                v-for="shop in searchSuggestions"
+                :key="shop.id"
+                @click="selectSuggestion(shop)"
+                >
+                {{ shop.name }}
+                </li>
+            </ul>
         </div>
 
         <!-- 中式店家 -->
@@ -118,6 +130,14 @@ export default {
         };
     },
     computed: {
+        searchSuggestions() {
+                const key = this.keyword.trim().toLowerCase();
+                if (!key) return [];
+
+                return this.allShops
+                    .filter(shop => shop.name.toLowerCase().includes(key))
+                    .slice(0, 5); // 最多顯示 5 筆
+            },
       allShops() {
         return this.$store.getters['shops/allShops'];
       },
@@ -139,6 +159,15 @@ export default {
       }
     },
     methods: {
+        selectSuggestion(shop) {
+            this.keyword = shop.name;
+
+            // 若你想直接跳到店家頁
+            this.$router.push({
+                name: 'ShopView',
+                params: { id: shop.id }
+            });
+        },
         toggleSidebar() {
             this.sidebarOpen = !this.sidebarOpen;
         },
@@ -532,6 +561,30 @@ export default {
             .sidebar-logout button:hover {
                 background-color: #0069D9;
             }
+            .search-suggestions {
+          position: absolute;
+          top: 100%;
+          width: 90%;
+          background: #fff;
+          border: 1px solid #ddd;
+          border-radius: 8px;
+          margin-top: 6px;
+          padding: 0;
+          list-style: none;
+          z-index: 120;
+          box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      }
+
+      .search-suggestions li {
+          padding: 10px 14px;
+          cursor: pointer;
+          font-size: 15px;
+          text-align: left;
+      }
+
+      .search-suggestions li:hover {
+          background-color: #f2f6ff;
+      }
 
 </style>
 

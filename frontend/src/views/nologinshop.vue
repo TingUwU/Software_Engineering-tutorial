@@ -42,6 +42,24 @@
     <!-- 搜尋 -->
     <div class="search-section">
       <input class="search-bar" placeholder="搜尋菜品…" v-model="keyword">
+      <button class="search-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8" />
+                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+            </button>
+      <ul
+        v-if="searchSuggestions.length"
+        class="search-suggestions"
+      >
+        <li
+          v-for="item in searchSuggestions"
+          :key="item.id"
+          @click="selectSuggestion(item)"
+        >
+          {{ item.itemName }}
+        </li>
+      </ul>
     </div>
 
     <!-- 菜品分類 -->
@@ -115,6 +133,16 @@ export default {
   },
 
   computed: {
+    searchSuggestions() {
+        const key = this.keyword.trim().toLowerCase();
+        if (!key || !this.shop || !this.shop.menu) return [];
+
+        return this.shop.menu
+            .filter(item =>
+                item.itemName.toLowerCase().includes(key)
+            )
+            .slice(0, 5); // 最多 5 筆
+    },
     todayBusiness() {
       if (!this.shop) return {}
       const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
@@ -135,6 +163,11 @@ export default {
   },
 
   methods: {
+    selectSuggestion(item) {
+        this.keyword = item.itemName;
+
+        this.openMenuItem(item); // 直接開啟 MenuItem Modal
+    },
     loadShop() {
       const shopId = this.$route.params.id
       const shop = this.$store.getters['shops/getShopById'](shopId)
@@ -254,6 +287,7 @@ export default {
         font-size: 16px;
         padding: 10px 0;
         border-radius: 4px;
+        text-align: left;
     }
 
         .sidebar li:hover {
@@ -610,4 +644,28 @@ export default {
             .sidebar-logout button:hover {
                 background-color: #0069D9;
             }
+      .search-suggestions {
+          position: absolute;
+          top: 100%;
+          width: 90%;
+          background: #fff;
+          border: 1px solid #ddd;
+          border-radius: 8px;
+          margin-top: 6px;
+          padding: 0;
+          list-style: none;
+          z-index: 120;
+          box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      }
+
+      .search-suggestions li {
+          padding: 10px 14px;
+          cursor: pointer;
+          font-size: 15px;
+          text-align: left;
+      }
+
+      .search-suggestions li:hover {
+          background-color: #f2f6ff;
+      }
 </style>
