@@ -89,7 +89,19 @@
             桌號 <input v-model="tableNumber" />
           </div>
           <div v-if="orderType==='外帶'">
-            取餐時間 <input type="time" v-model="takeoutTime" />
+            <div>
+              取餐時間
+              <input type="time" v-model="takeoutTime" />
+            </div>
+
+            <div>
+              手機號碼
+              <input
+                type="tel"
+                v-model="phoneNumber"
+                placeholder="請輸入手機號碼"
+              />
+            </div>
           </div>
         </div>
 
@@ -126,7 +138,7 @@ const orderType = ref('外帶')
 const tableNumber = ref('')
 const takeoutTime = ref('')
 const paymentMethod = ref('')
-
+const phoneNumber = ref('')
 // 購物車
 const cart = computed(() => ({
   items: store.state.cart.items || [],
@@ -152,15 +164,25 @@ const decreaseQuantity = index => {
 const checkout = () => {
   if (!cart.value.items.length) return alert('購物車是空的')
   if (orderType.value === '內用' && !tableNumber.value) return alert('請輸入桌號')
-  if (orderType.value === '外帶' && !takeoutTime.value) return alert('請選擇取餐時間')
+ if (orderType.value === '外帶') {
+  if (!takeoutTime.value) return alert('請選擇取餐時間')
+  if (!phoneNumber.value) return alert('請輸入手機號碼')
+}
   if (!paymentMethod.value) return alert('請選擇付款方式')
-
+ 
   const orderData = {
     storeId: store.state.cart.storeId,
-    customerId: null, // ✅ 訪客
+    customerId: null,
     orderType: orderType.value,
-    dineInDetail: orderType.value === '內用' ? { tableNumber: tableNumber.value } : null,
-    takeoutDetail: orderType.value === '外帶' ? { takeoutTime: takeoutTime.value } : null,
+    dineInDetail: orderType.value === '內用'
+      ? { tableNumber: tableNumber.value }
+      : null,
+    takeoutDetail: orderType.value === '外帶'
+      ? {
+          takeoutTime: takeoutTime.value,
+          phoneNumber: phoneNumber.value
+        }
+      : null,
     items: cart.value.items,
     totalAmount: cart.value.totalAmount,
     remarks: remarks.value,
@@ -244,7 +266,7 @@ const checkout = () => {
 .sidebar-avatar { width:50px; height:50px; border-radius:50%; }
 .username { color:#fff; font-weight:bold; }
 .sidebar ul { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:15px; }
-.sidebar li { color:#fff; cursor:pointer; padding:10px 0; border-radius:4px; }
+.sidebar li { color:#fff; cursor:pointer; padding:10px 0; border-radius:4px; text-align: left;}
 .sidebar li:hover { background:#001633; }
 .sidebar-logout { margin-top:auto; }
 .sidebar-logout button { width:100%; padding:10px 0; background:#fff; color:black; border:none; border-radius:6px; cursor:pointer; }
