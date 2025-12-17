@@ -14,6 +14,10 @@
         <router-link to="/nologincart"><li>購物車</li></router-link>
         <li>訂單管理</li>
       </ul>
+      <!-- 登入按鈕 -->
+      <div class="sidebar-login">
+        <button @click="goLogin">登入</button>
+      </div>
     </div>
 
     <!-- 左上角訪客頭像 -->
@@ -160,7 +164,9 @@ const decreaseQuantity = index => {
     store.dispatch('cart/updateItemQuantity', { index, quantity: q - 1 })
   }
 }
-
+const goLogin = () => {
+  router.push('/login')
+}
 const checkout = () => {
   if (!cart.value.items.length) return alert('購物車是空的')
   if (orderType.value === '內用' && !tableNumber.value) return alert('請輸入桌號')
@@ -268,9 +274,29 @@ const checkout = () => {
 .sidebar ul { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:15px; }
 .sidebar li { color:#fff; cursor:pointer; padding:10px 0; border-radius:4px; text-align: left;}
 .sidebar li:hover { background:#001633; }
-.sidebar-logout { margin-top:auto; }
-.sidebar-logout button { width:100%; padding:10px 0; background:#fff; color:black; border:none; border-radius:6px; cursor:pointer; }
-.sidebar-logout button:hover { background:#0069D9; color:#fff; }
+.sidebar-login {
+  margin-top: auto; /* 推到最下面 */
+  width: 100%;            /* 確保整個區塊滿寬 */
+  padding: 0 0;           /* 避免多餘 padding */
+}
+
+.sidebar-login button {
+  width: 100%;           /* 滿寬 */
+  padding: 20px 0;       /* 高度增加，點擊範圍更大 */
+  font-size: 20px;       /* 文字更大 */
+  background: #0069D9;   /* 主色 */
+  color: #fff;
+  border: none;
+  border-radius: 16px;   /* 圓角更大 */
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.3s;
+  text-align: center;    /* 文字置中 */
+}
+
+.sidebar-login button:hover {
+  background: #0056b3;   /* hover 顏色 */
+}
 .avatar { position: fixed; top:20px; left:20px; width:50px; height:50px; border-radius:50%; cursor:pointer; z-index:101; }
 .preview-avatar { width:80px; height:80px; border-radius:50%; object-fit:cover; margin-bottom:8px; }
 
