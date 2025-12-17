@@ -10,11 +10,10 @@ import nologinhome from '@/views/nologinhome.vue';
 import nologincart from '@/views/nologincart.vue';
 import nologinshop from '@/views/nologinshop.vue';
 import OrderView from '@/views/OrderView.vue';
-import StoreSetting from '@/views/StoreSetting.vue';
 const routes = [
-    { path: '/', name: 'Root', component: LoginView },
+    { path: '/', redirect: '/login' },
     { path: '/login', component: LoginView },
-    { path: '/home', component: HomeView, meta: { requiresAuth: true, role: 'buyer' } },
+    { path: '/home', component: HomeView, meta: { requiresAuth: true } },
     { path: '/cart', name: 'Cart', component: CartView },
     { path: '/shop/:id', name: 'ShopView', component: ShopView, props: true },
     { path: '/register', name: 'Register', component: RegisterView },
@@ -23,7 +22,6 @@ const routes = [
     { path: '/nologincart', name: 'nologincart', component: nologincart },
     { path: '/nologinshop/:id', name: 'nologinshop', component: nologinshop, props: true },
     { path: '/order', name: 'OrderView', component: OrderView },
-    { path: '/store-setting', name: 'StoreSetting', component: StoreSetting, meta: { requiresAuth: true, role: 'owner' } },
 ];
 
 const router = createRouter({
@@ -35,26 +33,13 @@ const router = createRouter({
 import store from '@/store'
 
 router.beforeEach((to, from, next) => {
-    const isLoggedIn = store.state.user.customer.isLoggedIn || !!localStorage.getItem('user')
-    const userRole = store.state.user.customer.role || (localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')).role : null)
-
-    // 根據角色決定首頁
-    const getHomePage = (role) => {
-        if (role === 'owner') {
-            return '/store-setting'
-        } else if (role === 'buyer') {
-            return '/home'
-        } else {
-            return '/home'  // 預設為顧客首頁
-        }
-    }
+    const isLoggedIn = store.state.user.isLoggedIn || !!localStorage.getItem('user')
 
     if (to.meta.requiresAuth && !isLoggedIn) {
-        next('/login')  // 需要登入但未登入 → 導向 /login
-    } else if ((to.path === '/login' || to.path === '/') && isLoggedIn) {
-        // 已登入 → 登入角色對應首頁
-        next(getHomePage(userRole))
-    } else {//其他所有情況
+        next('/nologinhome')  // 需要登入但未登入 → 導向 /login
+    } else if (to.path === '/login' && isLoggedIn) {
+        next('/home')   // 已登入 → 導向 /home
+    } else {
         next()
     }
 })
