@@ -14,6 +14,10 @@
                 <router-link to="/nologincart"><li>購物車</li></router-link>
                 <li>訂單管理</li>
             </ul>
+            <!-- 登入按鈕 -->
+            <div class="sidebar-login">
+                <button @click="goLogin">登入</button>
+            </div>
         </div>
 
         <!-- 左上角訪客頭像 -->
@@ -182,6 +186,10 @@ export default {
                 ? this.$refs.chineseSlider
                 : this.$refs.westernSlider;
             slider.scrollBy({ left: 200, behavior: 'smooth' });
+        },
+        goLogin() {
+            this.sidebarOpen = false; // 點擊後關閉側邊欄
+            this.$router.push('/login'); // 導向登入頁面
         }
     }
 };
@@ -542,25 +550,29 @@ export default {
             height: 28px;
         }
 
-    .sidebar-logout {
-        margin-top: auto; /* 推到底部 */
-        width: 100%;
-    }
+    .sidebar-login {
+  margin-top: auto; /* 推到最下面 */
+  width: 100%;            /* 確保整個區塊滿寬 */
+  padding: 0 0;           /* 避免多餘 padding */
+}
 
-        .sidebar-logout button {
-            width: 100%;
-            padding: 10px 0;
-            background-color: #fff;
-            color: black;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 16px;
-        }
+.sidebar-login button {
+  width: 100%;           /* 滿寬 */
+  padding: 20px 0;       /* 高度增加，點擊範圍更大 */
+  font-size: 20px;       /* 文字更大 */
+  background: #0069D9;   /* 主色 */
+  color: #fff;
+  border: none;
+  border-radius: 16px;   /* 圓角更大 */
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.3s;
+  text-align: center;    /* 文字置中 */
+}
 
-            .sidebar-logout button:hover {
-                background-color: #0069D9;
-            }
+.sidebar-login button:hover {
+  background: #0056b3;   /* hover 顏色 */
+}
             .search-suggestions {
           position: absolute;
           top: 100%;
