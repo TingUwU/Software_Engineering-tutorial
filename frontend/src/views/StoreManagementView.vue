@@ -1,0 +1,837 @@
+<template>
+    <div class="home">
+        <!-- 遮罩層 -->
+        <div v-show="sidebarOpen" class="overlay" @click="toggleSidebar"></div>
+
+        <!-- 左側側邊欄 -->
+        <div :class="['sidebar', { open: sidebarOpen }]">
+            <div class="sidebar-user" v-if="customer">
+                <img class="sidebar-avatar" :src="customer.photo || require('@/assets/logo.png')" alt="user">
+                <span class="username">{{ customer.nickname }}, 老闆好</span>
+            </div>
+            <ul>
+                <li @click="openUserModal">使用者資訊</li>
+                <router-link to="/order"><li>訂單管理</li></router-link>
+                <router-link to="/store-setting"><li>店家設定</li></router-link>
+            </ul>
+            <div class="sidebar-logout">
+                <button @click="logout">登出</button>
+            </div>
+        </div>
+
+        <!-- 左上角顧客頭像 -->
+        <img v-if="customer" class="avatar" :src="customer.photo || require('@/assets/logo.png')" alt="user" @click="toggleSidebar">
+
+        <!-- LOGO + 系統名稱 -->
+        <header class="header">
+            <div class="logo-container">
+                <h1 class="logo">菜單管理</h1>
+            </div>
+        </header>
+
+        <!-- 新增分類和餐點按鈕 -->
+        <div class="add-item-section">
+            <button class="btn-add-category" @click="openAddCategoryModal">
+                <span class="add-icon">+</span>
+                新增分類
+            </button>
+            <button class="btn-add-item" @click="openAddItemModal">
+                <span class="add-icon">+</span>
+                新增餐點
+            </button>
+        </div>
+
+        <!-- 搜尋區 -->
+        <div class="search-section">
+            <input
+            type="text"
+            class="search-bar"
+            placeholder="搜尋餐點…"
+            v-model="keyword"
+            />
+        </div>
+
+        <!-- 動態分類顯示 -->
+        <div v-if="categories.length === 0" class="no-category-message">
+            <p>尚未新增任何分類</p>
+        </div>
+
+        <section v-for="(category, index) in categories" :key="category" class="category-section">
+            <div class="category-header">
+                <h2 class="category-title">{{ category }}</h2>
+                <button class="btn-delete-category" @click="deleteCategory(category)">刪除分類</button>
+            </div>
+            <div class="slider-container">
+                <button class="scroll-btn left" @click="scrollLeft(index)">&#8249;</button>
+                <div :ref="'slider' + index" class="slider">
+                    <div 
+                        v-for="item in getItemsByCategory(category)"
+                        :key="item.id"
+                        class="menu-item-card"
+                        @click="openEditItemModal(item)"
+                    >
+                        <img :src="item.imgUrl || require('@/assets/logo.png')" class="item-img" alt="餐點圖片">
+                        <p class="item-name">{{ item.itemName }}</p>
+                        <p class="item-price"> {{ item.price }}元</p>
+                    </div>
+                </div>
+                <button class="scroll-btn right" @click="scrollRight(index)">&#8250;</button>
+            </div>
+            <div v-if="getItemsByCategory(category).length === 0" class="empty-message">
+                尚無{{ category }}類的餐點
+            </div>
+        </section>
+
+        <!-- 使用者資訊 Modal -->
+        <div v-if="userModalOpen" class="modal-overlay" @click.self="closeUserModal">
+            <div class="user-modal">
+                <h3>使用者資訊</h3>
+                <form @submit.prevent="updateUser">
+                    <div class="form-group">
+                        <label>頭像:</label>
+                        <img :src="editCustomer.photo || require('@/assets/logo.png')" class="preview-avatar" alt="user">
+                        <input type="file" @change="onAvatarChange" accept="image/*">
+                    </div>
+                    <div class="form-group">
+                        <label>名稱:</label>
+                        <input type="text" v-model="editCustomer.nickname">
+                    </div>
+                    <div class="form-group">
+                        <label>電話:</label>
+                        <input type="text" v-model="editCustomer.phone">
+                    </div>
+                    <div class="form-group">
+                        <label>電子郵件:</label>
+                        <input type="email" v-model="editCustomer.email">
+                    </div>
+                    <div class="modal-actions">
+                        <button type="submit" @click="updateUserInfo">儲存</button>
+                        <button type="button" @click="closeUserModal">關閉</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- 新增分類 Modal -->
+        <div v-if="categoryModalOpen" class="modal-overlay" @click.self="closeCategoryModal">
+            <div class="category-modal">
+                <h2 color="#0069D9">分類名稱:</h2>
+                <div class="form-group">
+                    <input type="text" v-model="newCategoryName">
+                </div>
+                <div class="modal-actions">
+                    <button @click="addCategory">新增</button>
+                    <button type="button" @click="closeCategoryModal">取消</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 餐點編輯 Modal -->
+        <OwnerMenuItem
+            :show="menuItemModalOpen"
+            :product="selectedProduct"
+            :categories="categories"
+            @close="closeMenuItemModal"
+            @save="saveMenuItem"
+            @delete="deleteItem"
+        />
+
+    </div>
+</template>
+
+<script>
+import OwnerMenuItem from '@/components/OwnerMenuItem.vue';
+
+export default {
+    components: {
+        OwnerMenuItem
+    },
+    data() {
+        return {
+            sidebarOpen: false,
+            userModalOpen: false,
+            menuItemModalOpen: false,
+            categoryModalOpen: false,
+            selectedProduct: {
+                id: '',
+                itemName: '',
+                price: 0,
+                tag: '',
+                imgUrl: ''
+            },
+            keyword: "",
+            editCustomer: {
+                photo: ""
+            },
+            newCategoryName: "",
+            // 餐點資料 (之後可以從 API 或 Vuex 取得)
+            menuItems: [],
+            // 分類資料
+            categories: []
+        };
+    },
+    computed: {
+        // 使用者資料
+        customer() {
+            return this.$store.getters['user/customer']
+        }
+    },
+    mounted() {
+        // 載入餐點資料
+        this.loadMenuItems();
+    },
+    methods: {
+        getItemsByCategory(category) {
+            const key = this.keyword.trim().toLowerCase();
+            return this.menuItems.filter(item => 
+                item.tag === category && 
+                (key === '' || item.itemName.toLowerCase().includes(key))
+            );
+        },
+
+        async loadMenuItems() {
+            try {
+                // TODO: 從 API 或 Vuex 取得當前商家的菜單和分類
+                
+                
+                // 初始為空，讓商家自己新增
+                this.menuItems = [];
+                this.categories = [];
+            } catch (err) {
+                console.error('載入菜單失敗:', err);
+            }
+        },
+
+        // 分類管理
+        openAddCategoryModal() {
+            this.newCategoryName = "";
+            this.categoryModalOpen = true;
+        },
+
+        closeCategoryModal() {
+            this.categoryModalOpen = false;
+            this.newCategoryName = "";
+        },
+
+        addCategory() {
+            const categoryName = this.newCategoryName.trim();
+            if (!categoryName) {
+                alert('請輸入分類名稱');
+                return;
+            }
+            if (this.categories.includes(categoryName)) {
+                alert('此分類已存在');
+                return;
+            }
+            this.categories.push(categoryName);
+            alert('分類已新增！');
+            this.closeCategoryModal();
+            // TODO: 之後可以改為呼叫 API
+        },
+
+        deleteCategory(category) {
+            const itemsInCategory = this.menuItems.filter(item => item.tag === category);
+            if (itemsInCategory.length > 0) {
+                alert('請先刪除所有餐點後再刪除分類');
+                return;
+            }
+            if (confirm(`確定要刪除「${category}」分類嗎？`)) {
+                const index = this.categories.indexOf(category);
+                if (index !== -1) {
+                    this.categories.splice(index, 1);
+                }
+                // TODO: 之後可以改為呼叫 API
+            }
+        },
+
+        // 餐點管理
+        openAddItemModal() {
+            if (this.categories.length === 0) {
+                alert('請先新增至少一個分類');
+                return;
+            }
+            this.selectedProduct = {
+                id: '',
+                itemName: '',
+                price: 0,
+                tag: this.categories[0],
+                imgUrl: ''
+            };
+            this.menuItemModalOpen = true;
+        },
+
+        openEditItemModal(item) {
+            this.selectedProduct = { ...item };
+            this.menuItemModalOpen = true;
+        },
+
+        closeMenuItemModal() {
+            this.menuItemModalOpen = false;
+        },
+
+        saveMenuItem(updatedItem) {
+            try {
+                if (updatedItem.id) {
+                    // 編輯現有餐點
+                    const index = this.menuItems.findIndex(item => item.id === updatedItem.id);
+                    if (index !== -1) {
+                        this.menuItems.splice(index, 1, updatedItem);
+                        alert('餐點已更新！');
+                    }
+                } else {
+                    // 新增餐點
+                    updatedItem.id = 'item' + Date.now();
+                    this.menuItems.push(updatedItem);
+                    alert('餐點已新增！');
+                }
+                // 之後可以改為呼叫 API 或 Vuex action
+            } catch (err) {
+                console.error('儲存失敗:', err);
+                alert('儲存失敗，請稍後再試');
+            }
+        },
+
+        deleteItem(itemId) {
+            const index = this.menuItems.findIndex(item => item.id === itemId);
+            if (index !== -1) {
+                this.menuItems.splice(index, 1);
+            }
+            // 之後可以改為呼叫 API 或 Vuex action
+        },
+
+        toggleSidebar() {
+            this.sidebarOpen = !this.sidebarOpen;
+        },
+
+        openUserModal() {
+            if (this.customer) {
+                this.editCustomer = { ...this.customer };
+                this.userModalOpen = true;
+            }
+        },
+
+        closeUserModal() {
+            this.userModalOpen = false;
+        },
+
+        async updateUserInfo() {
+            try {
+                const userId = this.editCustomer.id;
+                const updates = { ...this.editCustomer };
+                delete updates.id;
+
+                console.log('Sending updates:', userId, updates);
+
+                const result = await this.$store.dispatch('user/updateUser', { userId, updates });
+
+                console.log('Update result:', result);
+                alert('使用者資訊已更新！');
+                this.closeUserModal();
+            } catch (err) {
+                console.error(err);
+                alert('更新失敗，請稍後再試: ' + err.message);
+            }
+        },
+
+        scrollLeft(index) {
+            const slider = this.$refs['slider' + index];
+            if (slider && slider[0]) {
+                slider[0].scrollBy({ left: -200, behavior: 'smooth' });
+            }
+        },
+
+        scrollRight(index) {
+            const slider = this.$refs['slider' + index];
+            if (slider && slider[0]) {
+                slider[0].scrollBy({ left: 200, behavior: 'smooth' });
+            }
+        },
+
+        onAvatarChange(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    this.editCustomer.photo = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        },
+
+        logout() {
+            this.$store.dispatch('user/logout');
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            this.$router.push('/login');
+        }
+    }
+};
+</script>
+
+<style scoped>
+    .home {
+        background-color: #fff;
+        padding: 20px;
+        font-family: "Microsoft JhengHei", "PingFang TC", "Noto Sans TC", sans-serif;
+        position: relative;
+        overflow: hidden;
+        min-height: 100vh;
+    }
+
+    /* 遮罩層 */
+    .overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0,0,0,0.5);
+        z-index: 50;
+    }
+
+    /* 側邊欄 */
+    .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 250px;
+        height: 100%;
+        background-color: #002244;
+        padding: 20px;
+        box-sizing: border-box;
+        z-index: 100;
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+        .sidebar.open {
+            transform: translateX(0);
+        }
+
+    /* sidebar 使用者資訊 */
+    .sidebar-user {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+
+    .sidebar-avatar {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+    }
+
+    .username {
+        color: #fff;
+        font-size: 16px;
+        font-weight: bold;
+    }
+
+    /* sidebar 選項 */
+    .sidebar ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .sidebar li {
+        color: #fff;
+        cursor: pointer;
+        font-size: 16px;
+        width: 100%;
+        padding: 10px 0;
+        text-align: left;
+        border-radius: 4px;
+    }
+
+        .sidebar li:hover {
+            background-color: #001633;
+        }
+
+    /* 左上角顧客頭像 */
+    .avatar {
+        position: fixed;
+        top: 20px;
+        left: 20px;
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        cursor: pointer;
+        z-index: 101;
+    }
+    
+    .preview-avatar {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        object-fit: cover;
+        display: block;
+        margin-bottom: 8px;
+    }
+
+    /* LOGO + 系統名稱 */
+    .header {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin-top: 20px;
+    }
+
+    .logo-container {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .logo {
+        color: #0069D9;
+        font-size: 32px;
+        font-weight: bold;
+    }
+
+    /* 新增餐點按鈕區域 */
+    .add-item-section {
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+        margin-top: 20px;
+    }
+
+    .btn-add-category,
+    .btn-add-item {
+        background-color: #0069D9;
+        color: white;
+        border: none;
+        padding: 12px 30px;
+        border-radius: 10px;
+        font-size: 18px;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        transition: background-color 0.3s, transform 0.2s;
+    }
+    
+    .add-icon {
+        font-size: 24px;
+        font-weight: bold;
+    }
+
+    /* 搜尋欄 */
+    .search-section {
+        margin-top: 20px;
+        display: flex;
+        justify-content: center;
+        position: relative;
+    }
+
+    .search-bar {
+        width: 90%;
+        padding: 14px;
+        border: 2px solid #0069D9;
+        border-radius: 10px;
+        font-size: 16px;
+    }
+
+    /* 分類區塊 */
+    .category-section {
+        margin-top: 30px;
+    }
+
+    .category-header {
+        display: flex;
+        position: relative;
+        align-items: center;
+        margin-bottom: 10px;
+        padding: 0 20px;
+    }
+
+    .category-title {
+        color: #0069D9;
+        font-size: 22px;
+        font-weight: bold;
+        position: absolute; left: 50%; transform: translateX(-50%)
+    }
+
+    .btn-delete-category {
+        background-color: #dc3545;
+        color: white;
+        border: none;
+        padding: 6px 14px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 16px;
+        transition: background-color 0.3s;
+        width: 100px;
+        height: 40px;
+        position: absolute;
+        right: 20px;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+
+
+
+    .no-category-message {
+        text-align: center;
+        padding: 60px 20px;
+        color: #666;
+        font-size: 18px;
+    }
+
+    .no-category-message p {
+        margin: 0;
+    }
+
+    /* 左右滑動區塊 */
+    .slider-container {
+        position: relative;
+        width: 100%;
+        display: flex;
+        align-items: center;
+        min-height: 150px;
+    }
+
+    .slider {
+        display: flex;
+        gap: 15px;
+        overflow-x: auto;
+        scroll-behavior: smooth;
+        -webkit-overflow-scrolling: touch;
+        flex-wrap: nowrap;
+        padding-bottom: 10px;
+    }
+
+    .slider::-webkit-scrollbar {
+        display: none;
+    }
+
+    /* 滑動按鈕 */
+    .scroll-btn {
+        background-color: #0069D9;
+        color: #fff;
+        border: none;
+        border-radius: 50%;
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 10;
+        font-size: 24px;
+    }
+
+    .scroll-btn.left {
+        left: -18px;
+    }
+
+    .scroll-btn.right {
+        right: -18px;
+    }
+
+    /* 菜單項目卡片 */
+    .menu-item-card {
+        min-width: 160px;
+        flex-shrink: 0;
+        border-radius: 12px;
+        background: #fff;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        text-align: center;
+        padding-bottom: 10px;
+        transition: transform 0.3s;
+        text-decoration: none;
+    }
+
+    .menu-item-card:hover {
+        transform: scale(1.05);
+    }
+
+    .item-img {
+        width: 100%;
+        height: 110px;
+        border-radius: 12px 12px 0 0;
+        object-fit: cover;
+        display: block;
+    }
+
+    .item-image-placeholder {
+        width: 100%;
+        height: 110px;
+        border-radius: 12px 12px 0 0;
+        background-color: #f5f5f5;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #aea5a5;
+        font-size: 14px;
+        border-bottom: 2px solid #e0e0e0;
+    }
+
+    .item-name {
+        margin-top: 8px;
+        font-weight: bold;
+        color: #000;
+        font-size: 14px;
+        padding: 0 8px;
+    }
+
+    .item-price {
+        margin-top: 4px;
+        font-size: 14px;
+        color: #0069D9;
+        font-weight: 600;
+        padding: 0 8px;
+    }
+
+    .empty-message {
+        text-align: center;
+        color: #999;
+        padding: 20px;
+        font-size: 14px;
+        width: 100%;
+        position: relative;
+        left: -18px;
+        bottom: 30%;
+        transform: translateY(-50%);
+    }
+
+    /* Modal */
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0,0,0,0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 200;
+    }
+
+    .user-modal,
+    .category-modal {
+        background-color: #fff;
+        padding: 20px 30px;
+        border-radius: 12px;
+        width: 500px;
+        height: 200px;
+        max-width: 90%;
+        text-align: left;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+        .user-modal h2,
+        .category-modal h2 {
+            color: #0069D9;
+            margin-bottom: 15px;
+        }
+
+    .form-group {
+        margin-bottom: 10px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+        .form-group label {
+            margin-bottom: 4px;
+            font-weight: bold;
+        }
+
+        .form-group input {
+            padding: 6px 8px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+
+        }
+
+    .modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 15px;
+    }
+
+        .modal-actions button {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            width: 100px;
+            height: 40px;
+            font-size: 14px;
+        }
+
+            .modal-actions button:first-child {
+                background-color: #0069D9;
+                color: #fff;
+            }
+
+            .modal-actions button:last-child {
+                background-color: #ccc;
+                color: #333;
+            }
+
+    .sidebar-logout {
+        margin-top: auto;
+        width: 100%;
+    }
+
+        .sidebar-logout button {
+            width: 100%;
+            padding: 10px 0;
+            background-color: #fff;
+            color: black;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+            .sidebar-logout button:hover {
+                background-color: #0069D9;
+            }
+
+    /* 響應式設計 */
+    @media (max-width: 768px) {
+        .scroll-btn {
+            width: 30px;
+            height: 30px;
+            font-size: 20px;
+        }
+
+        .scroll-btn.left {
+            left: -15px;
+        }
+
+        .scroll-btn.right {
+            right: -15px;
+        }
+
+        .menu-item-card {
+            min-width: 140px;
+        }
+
+        .item-img,
+        .item-image-placeholder {
+            height: 90px;
+        }
+    }
+</style>

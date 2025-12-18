@@ -3,46 +3,50 @@
         <!-- 遮罩層 -->
         <div v-show="sidebarOpen" class="overlay" @click="toggleSidebar"></div>
 
-        <!-- 左側側邊欄 -->
+        <!-- 左側側邊欄（訪客版） -->
         <div :class="['sidebar', { open: sidebarOpen }]">
             <div class="sidebar-user">
-                <img class="sidebar-avatar" :src="customer.photo || require('@/assets/logo.png')" alt="user">
-                <span class="username">{{ customer.nickname }}, 肚子餓了嗎</span>
+                <img class="sidebar-avatar" :src="require('@/assets/logo.png')" alt="guest">
+                <span class="username">訪客，肚子餓了嗎</span>
             </div>
+
             <ul>
-                <li @click="openUserModal">使用者資訊</li>
-                <router-link to="/cart"><li>購物車</li></router-link>
-                <router-link to="/order"><li>訂單管理</li></router-link>
-                <router-link to="/favorite"><li>收藏</li></router-link>
+                <router-link to="/nologincart"><li>購物車</li></router-link>
+                <li>訂單管理</li>
             </ul>
-            <div class="sidebar-logout">
-                <button @click="logout">登出</button>
+            <!-- 登入按鈕 -->
+            <div class="sidebar-login">
+                <button @click="goLogin">登入</button>
             </div>
         </div>
 
-        <!-- 左上角顧客頭像 -->
-        <img class="avatar" :src="customer.photo || require('@/assets/logo.png')" alt="user" @click="toggleSidebar">
+        <!-- 左上角訪客頭像 -->
+        <img
+            class="avatar"
+            :src="require('@/assets/logo.png')"
+            alt="guest"
+            @click="toggleSidebar"
+        >
 
-        <!-- LOGO + 系統名稱 -->
+        <!-- 標題 -->
         <header class="header">
-            <div class="logo-container">
-                <h1 class="logo">店家一覽</h1>
-            </div>
+            <h1 class="logo">店家一覽</h1>
         </header>
 
-        <!-- 搜尋區 -->
+        <!-- 搜尋 -->
         <div class="search-section">
             <input
-            type="text"
-            class="search-bar"
-            placeholder="搜尋餐廳…"
-            v-model="keyword"
-            @keyup.enter="doSearch"
-            />
-            <button class="search-btn" @click="doSearch">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="11" cy="11" r="8" />
-                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                type="text"
+                class="search-bar"
+                placeholder="搜尋餐廳…"
+                v-model="keyword"
+            >
+            <button class="search-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                     fill="none" stroke="white" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"/>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"/>
                 </svg>
             </button>
             <ul
@@ -65,11 +69,17 @@
             <div class="slider-container">
                 <button class="scroll-btn left" @click="scrollLeft('chinese')">&#8249;</button>
                 <div ref="chineseSlider" class="slider">
-                    <router-link v-for="shop in chineseShops"
-                                 :key="shop.id"
-                                 :to="{ name: 'ShopView', params: { id: shop.id } }"
-                                 class="shop-card">
-                        <img :src="shop.menu[0]?.imgUrl || require('@/assets/logo.png')" class="shop-img" alt="店家圖片">
+                    <router-link
+                        v-for="shop in chineseShops"
+                        :key="shop.id"
+                        :to="{ name: 'nologinshop', params: { id: shop.id } }"
+                        class="shop-card"
+                    >
+                        <img
+                            :src="shop.menu[0]?.imgUrl || require('@/assets/logo.png')"
+                            class="shop-img"
+                            alt="shop"
+                        >
                         <p class="shop-name">{{ shop.name }}</p>
                     </router-link>
                 </div>
@@ -83,11 +93,17 @@
             <div class="slider-container">
                 <button class="scroll-btn left" @click="scrollLeft('western')">&#8249;</button>
                 <div ref="westernSlider" class="slider">
-                    <router-link v-for="shop in westernShops"
-                                 :key="shop.id"
-                                 :to="{ name: 'ShopView', params: { id: shop.id } }"
-                                 class="shop-card">
-                        <img :src="shop.menu[0]?.imgUrl || require('@/assets/logo.png')" class="shop-img" alt="店家圖片">
+                    <router-link
+                        v-for="shop in westernShops"
+                        :key="shop.id"
+                        :to="{ name: 'nologinshop', params: { id: shop.id } }"
+                        class="shop-card"
+                    >
+                        <img
+                            :src="shop.menu[0]?.imgUrl || require('@/assets/logo.png')"
+                            class="shop-img"
+                            alt="shop"
+                        >
                         <p class="shop-name">{{ shop.name }}</p>
                     </router-link>
                 </div>
@@ -95,69 +111,30 @@
             </div>
         </section>
 
-
-        <!-- 使用者資訊 Modal -->
-        <div v-if="userModalOpen" class="modal-overlay" @click.self="closeUserModal">
-            <div class="user-modal">
-                <h3>使用者資訊</h3>
-                <form @submit.prevent="updateUser">
-                    <div class="form-group">
-                        <label>頭像:</label>
-                        <img :src="editCustomer.photo || require('@/assets/logo.png')" class="preview-avatar" alt="user">
-                        <input type="file" @change="onAvatarChange" accept="image/*">
-                    </div>
-                    <div class="form-group">
-                        <label>名稱:</label>
-                        <input type="text" v-model="editCustomer.nickname">
-                    </div>
-                    <div class="form-group">
-                        <label>電話:</label>
-                        <input type="text" v-model="editCustomer.phone">
-                    </div>
-                    <div class="form-group">
-                        <label>電子郵件:</label>
-                        <input type="email" v-model="editCustomer.email">
-                    </div>
-                    <div class="modal-actions">
-                        <button type="submit" @click="updateUserInfo">儲存</button>
-                        <button type="button" @click="closeUserModal">關閉</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <!-- 右下角購物車快捷 -->
-        <router-link to="/cart" class="cart-btn">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="24" height="24">
-                <circle cx="9" cy="21" r="1" />
-                <circle cx="20" cy="21" r="1" />
-                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+        <!-- 右下角購物車 -->
+        <router-link to="/nologincart" class="cart-btn">
+            <svg xmlns="http://www.w3.org/2000/svg"
+                 fill="none" stroke="white" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round"
+                 width="24" height="24">
+                <circle cx="9" cy="21" r="1"/>
+                <circle cx="20" cy="21" r="1"/>
+                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
             </svg>
         </router-link>
-
     </div>
 </template>
 
 <script>
-    export default {
-        data() {
-            return {
-                sidebarOpen: false,
-                userModalOpen: false,
-                menuItemModalOpen: false,
-                selectedProduct: {
-                    id: '',
-                    itemName: '',
-                    price: 0
-                },
-                keyword: "",
-                editCustomer: {
-                    photo: ""
-                }
-            };
-        },
-        computed: {
-            searchSuggestions() {
+export default {
+    data() {
+        return {
+            sidebarOpen: false,
+            keyword: ""
+        };
+    },
+    computed: {
+        searchSuggestions() {
                 const key = this.keyword.trim().toLowerCase();
                 if (!key) return [];
 
@@ -165,118 +142,57 @@
                     .filter(shop => shop.name.toLowerCase().includes(key))
                     .slice(0, 5); // 最多顯示 5 筆
             },
-             // 使用者資料
-            customer() {
-                return this.$store.getters['user/customer']
-            },
+      allShops() {
+        return this.$store.getters['shops/allShops'];
+      },
 
-            // 所有店家
-            allShops() {
-                return this.$store.getters['shops/allShops']
-            },
+      chineseShops() {
+        const ids = ['store001', 'store002', 'c1', 'c2'];
+        return this.allShops.filter(shop =>
+          ids.includes(shop.id) &&
+          shop.name.includes(this.keyword)
+        );
+      },
 
-            // 中式店家（＋搜尋）
-            chineseShops() {
-                const chineseIds = ['store001', 'store002', 'c1', 'c2'];
-                const key = this.keyword.trim().toLowerCase();
+      westernShops() {
+        const ids = ['store003', 'store004', 'w1', 'w2'];
+        return this.allShops.filter(shop =>
+          ids.includes(shop.id) &&
+          shop.name.includes(this.keyword)
+        );
+      }
+    },
+    methods: {
+        selectSuggestion(shop) {
+            this.keyword = shop.name;
 
-                return this.allShops.filter(shop =>
-                    chineseIds.includes(shop.id) &&
-                    shop.name.toLowerCase().includes(key)
-                );
-            },
-
-            // 西式店家（＋搜尋）
-            westernShops() {
-                const westernIds = ['store003', 'store004', 'w1', 'w2'];
-                const key = this.keyword.trim().toLowerCase();
-
-                return this.allShops.filter(shop =>
-                    westernIds.includes(shop.id) &&
-                    shop.name.toLowerCase().includes(key)
-                );
-            }
+            // 若你想直接跳到店家頁
+            this.$router.push({
+                name: 'ShopView',
+                params: { id: shop.id }
+            });
         },
-        methods: {
-            selectSuggestion(shop) {
-                this.keyword = shop.name;
-
-                // 若你想直接跳到店家頁
-                this.$router.push({
-                    name: 'ShopView',
-                    params: { id: shop.id }
-                });
-            },
-            doSearch() {
-                // 現在使用 computed 即時搜尋
-                // 之後若要改 API 搜尋，可以寫在這
-                console.log('搜尋：', this.keyword);
-            },
-            toggleSidebar() {
-                this.sidebarOpen = !this.sidebarOpen;
-            },
-            openUserModal() {
-                this.editCustomer = { ...this.customer };
-                this.userModalOpen = true;
-            },
-            closeUserModal() {
-                this.userModalOpen = false;
-            },
-            async updateUserInfo() {
-                try {
-                    const userId = this.editCustomer.id;
-                    const updates = { ...this.editCustomer };
-                    delete updates.id;
-
-                    console.log('Sending updates:', userId, updates); // ✅
-
-                    const result = await this.$store.dispatch('user/updateUser', { userId, updates });
-
-                    console.log('Update result:', result); // ✅
-                    alert('使用者資訊已更新！');
-                    this.closeUserModal();
-                } catch (err) {
-                    console.error(err);
-                    alert('更新失敗，請稍後再試: ' + err.message);
-                }
-            },
-            scrollLeft(type) {
-                const slider = type === 'chinese' ? this.$refs.chineseSlider : this.$refs.westernSlider;
-                slider.scrollBy({ left: -200, behavior: 'smooth' });
-            },
-            scrollRight(type) {
-                const slider = type === 'chinese' ? this.$refs.chineseSlider : this.$refs.westernSlider;
-                slider.scrollBy({ left: 200, behavior: 'smooth' });
-            },
-            goToCart(){
-                this.$router.push('/cart');
-            },
-           
-            closeMenuItemModal() {
-                this.menuItemModalOpen = false;
-            },
-            handleAddToCart(cartItem) {
-                console.log('加入購物車:', cartItem);
-                this.$store.dispatch('cart/addItem', cartItem);
-            },
-            onAvatarChange(event) {
-                const file = event.target.files[0];
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onload = e => {
-                        this.editCustomer.photo = e.target.result; // base64 字串
-                    };
-                    reader.readAsDataURL(file);
-                }
-            },
-            logout() {
-                this.$store.dispatch('user/logout'); // 呼叫 Vuex logout
-                localStorage.removeItem('token');    // 如果有 token
-                localStorage.removeItem('user');
-                this.$router.push('/login');         // 導向登入頁
-            }
+        toggleSidebar() {
+            this.sidebarOpen = !this.sidebarOpen;
+        },
+        scrollLeft(type) {
+            const slider = type === 'chinese'
+                ? this.$refs.chineseSlider
+                : this.$refs.westernSlider;
+            slider.scrollBy({ left: -200, behavior: 'smooth' });
+        },
+        scrollRight(type) {
+            const slider = type === 'chinese'
+                ? this.$refs.chineseSlider
+                : this.$refs.westernSlider;
+            slider.scrollBy({ left: 200, behavior: 'smooth' });
+        },
+        goLogin() {
+            this.sidebarOpen = false; // 點擊後關閉側邊欄
+            this.$router.push('/login'); // 導向登入頁面
         }
-    };
+    }
+};
 </script>
 
 <style scoped>
@@ -634,26 +550,30 @@
             height: 28px;
         }
 
-    .sidebar-logout {
-        margin-top: auto; /* 推到底部 */
-        width: 100%;
-    }
+    .sidebar-login {
+  margin-top: auto; /* 推到最下面 */
+  width: 100%;            /* 確保整個區塊滿寬 */
+  padding: 0 0;           /* 避免多餘 padding */
+}
 
-        .sidebar-logout button {
-            width: 100%;
-            padding: 10px 0;
-            background-color: #fff;
-            color: black;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 16px;
-        }
+.sidebar-login button {
+  width: 100%;           /* 滿寬 */
+  padding: 20px 0;       /* 高度增加，點擊範圍更大 */
+  font-size: 20px;       /* 文字更大 */
+  background: #0069D9;   /* 主色 */
+  color: #fff;
+  border: none;
+  border-radius: 16px;   /* 圓角更大 */
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.3s;
+  text-align: center;    /* 文字置中 */
+}
 
-            .sidebar-logout button:hover {
-                background-color: #0069D9;
-            }
-    .search-suggestions {
+.sidebar-login button:hover {
+  background: #0056b3;   /* hover 顏色 */
+}
+            .search-suggestions {
           position: absolute;
           top: 100%;
           width: 90%;
@@ -677,4 +597,6 @@
       .search-suggestions li:hover {
           background-color: #f2f6ff;
       }
+
 </style>
+

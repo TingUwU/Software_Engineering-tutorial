@@ -26,72 +26,64 @@
         <!-- LOGO + 系統名稱 -->
         <header class="header">
             <div class="logo-container">
-                <h1 class="logo">店家一覽</h1>
+                <h1 class="logo">收藏</h1>
             </div>
         </header>
 
         <!-- 搜尋區 -->
         <div class="search-section">
-            <input
-            type="text"
-            class="search-bar"
-            placeholder="搜尋餐廳…"
-            v-model="keyword"
-            @keyup.enter="doSearch"
-            />
-            <button class="search-btn" @click="doSearch">
+            <input type="text" class="search-bar" placeholder="搜尋收藏的餐廳/商品…" v-model="keyword">
+            <button class="search-btn">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <circle cx="11" cy="11" r="8" />
                     <line x1="21" y1="21" x2="16.65" y2="16.65" />
                 </svg>
             </button>
-            <ul
-                v-if="searchSuggestions.length"
-                class="search-suggestions"
-            >
-                <li
-                v-for="shop in searchSuggestions"
-                :key="shop.id"
-                @click="selectSuggestion(shop)"
-                >
-                {{ shop.name }}
-                </li>
-            </ul>
         </div>
 
-        <!-- 中式店家 -->
+        <!-- 收藏的餐廳 -->
         <section class="category-section">
-            <h2 class="category-title">中式</h2>
-            <div class="slider-container">
-                <button class="scroll-btn left" @click="scrollLeft('chinese')">&#8249;</button>
-                <div ref="chineseSlider" class="slider">
-                    <router-link v-for="shop in chineseShops"
-                                 :key="shop.id"
-                                 :to="{ name: 'ShopView', params: { id: shop.id } }"
-                                 class="shop-card">
-                        <img :src="shop.menu[0]?.imgUrl || require('@/assets/logo.png')" class="shop-img" alt="店家圖片">
-                        <p class="shop-name">{{ shop.name }}</p>
-                    </router-link>
+            <h2 class="category-title">餐廳 ({{ favoriteStores.length }})</h2>
+            <div v-if="favoriteStores.length > 0" class="slider-container">
+                <button class="scroll-btn left" @click="scrollLeft('stores')">&#8249;</button>
+                <div ref="storesSlider" class="slider">
+                    <div v-for="store in favoriteStores"
+                         :key="store.id"
+                         class="shop-card"
+                         @click="goToStore(store.id)">
+                        <img :src="store.menu[0]?.imgUrl || require('@/assets/logo.png')" class="shop-img" alt="店家圖片">
+                        <p class="shop-name">{{ store.name }}</p>
+                    </div>
                 </div>
-                <button class="scroll-btn right" @click="scrollRight('chinese')">&#8250;</button>
+                <button class="scroll-btn right" @click="scrollRight('stores')">&#8250;</button>
+            </div>
+            <div v-else class="empty-message">
+                <p>尚無收藏的餐廳</p>
             </div>
         </section>
 
-        <!-- 西式店家 -->
+        <!-- 收藏的商品 -->
         <section class="category-section">
-            <h2 class="category-title">西式</h2>
-            <div class="slider-container">
-                <button class="scroll-btn left" @click="scrollLeft('western')">&#8249;</button>
-                <div ref="westernSlider" class="slider">
-                    <router-link v-for="shop in westernShops"
-                                 :key="shop.id"
-                                 :to="{ name: 'ShopView', params: { id: shop.id } }"
-                                 class="shop-card">
-                        <img :src="shop.menu[0]?.imgUrl || require('@/assets/logo.png')" class="shop-img" alt="店家圖片">
-                        <p class="shop-name">{{ shop.name }}</p>
-                    </router-link>
+            <h2 class="category-title">商品 ({{ favoriteItems.length }})</h2>
+            <div v-if="favoriteItems.length > 0" class="slider-container">
+                <button class="scroll-btn left" @click="scrollLeft('items')">&#8249;</button>
+                <div ref="itemsSlider" class="slider">
+                    <div v-for="item in favoriteItems"
+                         :key="item.id"
+                         class="shop-card"
+                         @click="openMenuItem(item)">
+                        <img :src="item.imgUrl || require('@/assets/logo.png')" class="shop-img" alt="商品圖片">
+                        <div class="item-info">
+                            <p class="shop-name">{{ item.itemName }}</p>
+                            <p class="item-store">{{ item.storeName }}</p>
+                            <p class="item-price">NT$ {{ item.price }}</p>
+                        </div>
+                    </div>
                 </div>
-                <button class="scroll-btn right" @click="scrollRight('western')">&#8250;</button>
+                <button class="scroll-btn right" @click="scrollRight('items')">&#8250;</button>
+            </div>
+            <div v-else class="empty-message">
+                <p>尚無收藏的商品</p>
             </div>
         </section>
 
@@ -119,12 +111,22 @@
                         <input type="email" v-model="editCustomer.email">
                     </div>
                     <div class="modal-actions">
-                        <button type="submit" @click="updateUserInfo">儲存</button>
+                        <button type="submit">儲存</button>
                         <button type="button" @click="closeUserModal">關閉</button>
                     </div>
                 </form>
             </div>
         </div>
+
+        <!-- 商品詳情 Modal -->
+        <MenuItem
+            :show="menuItemModalOpen"
+            :product="selectedProduct"
+            :isFavorited="true"
+            @close="closeMenuItem"
+            @add-to-cart="handleAddToCart"
+            @toggle-favorite="toggleItemFavorite"
+        />
 
         <!-- 右下角購物車快捷 -->
         <router-link to="/cart" class="cart-btn">
@@ -139,7 +141,12 @@
 </template>
 
 <script>
+    import MenuItem from '@/components/MenuItem.vue';
+
     export default {
+        components: {
+            MenuItem
+        },
         data() {
             return {
                 sidebarOpen: false,
@@ -148,7 +155,10 @@
                 selectedProduct: {
                     id: '',
                     itemName: '',
-                    price: 0
+                    price: 0,
+                    description: '',
+                    imgUrl: '',
+                    storeId: ''
                 },
                 keyword: "",
                 editCustomer: {
@@ -157,61 +167,38 @@
             };
         },
         computed: {
-            searchSuggestions() {
-                const key = this.keyword.trim().toLowerCase();
-                if (!key) return [];
-
-                return this.allShops
-                    .filter(shop => shop.name.toLowerCase().includes(key))
-                    .slice(0, 5); // 最多顯示 5 筆
-            },
-             // 使用者資料
+            //獲取用戶資料
             customer() {
                 return this.$store.getters['user/customer']
             },
-
-            // 所有店家
-            allShops() {
+            //獲取所有店家資料
+            stores() {
                 return this.$store.getters['shops/allShops']
             },
-
-            // 中式店家（＋搜尋）
-            chineseShops() {
-                const chineseIds = ['store001', 'store002', 'c1', 'c2'];
-                const key = this.keyword.trim().toLowerCase();
-
-                return this.allShops.filter(shop =>
-                    chineseIds.includes(shop.id) &&
-                    shop.name.toLowerCase().includes(key)
+            favoriteStores() {
+                return this.stores.filter(store => 
+                    this.customer.favorStores.includes(store.id)
                 );
             },
-
-            // 西式店家（＋搜尋）
-            westernShops() {
-                const westernIds = ['store003', 'store004', 'w1', 'w2'];
-                const key = this.keyword.trim().toLowerCase();
-
-                return this.allShops.filter(shop =>
-                    westernIds.includes(shop.id) &&
-                    shop.name.toLowerCase().includes(key)
-                );
+            favoriteItems() {
+                const items = [];
+                this.customer.favorItems.forEach(favorItem => {
+                    const store = this.stores.find(s => s.id === favorItem.storeId);
+                    if (store) {
+                        const menuItem = store.menu.find(m => m.id === favorItem.itemId);
+                        if (menuItem) {
+                            items.push({
+                                storeId: store.id,
+                                storeName: store.name,
+                                ...menuItem
+                            });
+                        }
+                    }
+                });
+                return items;
             }
         },
         methods: {
-            selectSuggestion(shop) {
-                this.keyword = shop.name;
-
-                // 若你想直接跳到店家頁
-                this.$router.push({
-                    name: 'ShopView',
-                    params: { id: shop.id }
-                });
-            },
-            doSearch() {
-                // 現在使用 computed 即時搜尋
-                // 之後若要改 API 搜尋，可以寫在這
-                console.log('搜尋：', this.keyword);
-            },
             toggleSidebar() {
                 this.sidebarOpen = !this.sidebarOpen;
             },
@@ -222,42 +209,63 @@
             closeUserModal() {
                 this.userModalOpen = false;
             },
-            async updateUserInfo() {
-                try {
-                    const userId = this.editCustomer.id;
-                    const updates = { ...this.editCustomer };
-                    delete updates.id;
-
-                    console.log('Sending updates:', userId, updates); // ✅
-
-                    const result = await this.$store.dispatch('user/updateUser', { userId, updates });
-
-                    console.log('Update result:', result); // ✅
-                    alert('使用者資訊已更新！');
-                    this.closeUserModal();
-                } catch (err) {
-                    console.error(err);
-                    alert('更新失敗，請稍後再試: ' + err.message);
-                }
+            updateUser() {
+                this.$store.dispatch('user/updateCustomer', this.editCustomer);
+                this.closeUserModal();
+                alert('使用者資訊已更新！');
             },
             scrollLeft(type) {
-                const slider = type === 'chinese' ? this.$refs.chineseSlider : this.$refs.westernSlider;
-                slider.scrollBy({ left: -200, behavior: 'smooth' });
+                const slider = type === 'stores' ? this.$refs.storesSlider : this.$refs.itemsSlider;
+                if (slider) {
+                    slider.scrollBy({ left: -200, behavior: 'smooth' });
+                }
             },
             scrollRight(type) {
-                const slider = type === 'chinese' ? this.$refs.chineseSlider : this.$refs.westernSlider;
-                slider.scrollBy({ left: 200, behavior: 'smooth' });
+                const slider = type === 'stores' ? this.$refs.storesSlider : this.$refs.itemsSlider;
+                if (slider) {
+                    slider.scrollBy({ left: 200, behavior: 'smooth' });
+                }
             },
             goToCart(){
                 this.$router.push('/cart');
             },
-           
-            closeMenuItemModal() {
+            goToStore(storeId) {
+                this.$router.push({ name: 'ShopView', params: { id: storeId } });
+            },
+            openMenuItem(item) {
+                this.selectedProduct = {
+                    id: item.id,
+                    itemName: item.itemName,
+                    price: item.price,
+                    description: item.description,
+                    imgUrl: item.imgUrl,
+                    storeId: item.storeId // 保存店家ID用於收藏功能
+                };
+                // 設定當前店家ID到購物車
+                this.$store.dispatch('cart/setStoreId', item.storeId);
+                this.menuItemModalOpen = true;
+            },
+            closeMenuItem() {
                 this.menuItemModalOpen = false;
             },
             handleAddToCart(cartItem) {
                 console.log('加入購物車:', cartItem);
                 this.$store.dispatch('cart/addItem', cartItem);
+            },
+            toggleItemFavorite() {
+                const itemId = this.selectedProduct.id;
+                const storeId = this.selectedProduct.storeId;
+                
+                this.$store.dispatch('user/toggleFavorItem', { storeId, itemId }).then(isFavorited => {
+                    if (isFavorited) {
+                        alert('已加入收藏');
+                    } else {
+                        alert('已取消收藏');
+                        // 關閉 Modal（因為已經取消收藏）
+                        this.closeMenuItem();
+                    }
+                });
+                // TODO: call API to save favorItems
             },
             onAvatarChange(event) {
                 const file = event.target.files[0];
@@ -365,6 +373,27 @@
         .sidebar li:hover {
             background-color: #001633;
         }
+
+    .sidebar-logout {
+        margin-top: auto; /* 推到底部 */
+        width: 100%;
+    }
+
+        .sidebar-logout button {
+            width: 100%;
+            padding: 10px 0;
+            background-color: #fff;
+            color: black;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+            .sidebar-logout button:hover {
+                background-color: #0069D9;
+                color: #fff;
+            }
 
     /* 左上角顧客頭像 */
     .avatar {
@@ -520,6 +549,7 @@
         padding-bottom: 10px;
         transition: transform 0.3s;
         text-decoration: none;
+        cursor: pointer;
     }
 
         .shop-card:hover {
@@ -539,6 +569,36 @@
         color: #000; /* 黑色文字 */
         text-decoration: none; /* 去掉底線 */
     }
+
+    /* 商品資訊 */
+    .item-info {
+        padding: 0 10px;
+    }
+
+    .item-store {
+        margin-top: 4px;
+        font-size: 12px;
+        color: #666;
+    }
+
+    .item-price {
+        margin-top: 4px;
+        font-size: 14px;
+        font-weight: bold;
+        color: #0069D9;
+    }
+
+    /* 空狀態訊息 */
+    .empty-message {
+        text-align: center;
+        padding: 40px 20px;
+        color: #999;
+        font-size: 16px;
+    }
+
+        .empty-message p {
+            margin: 0;
+        }
 
 
     /* Modal */
@@ -633,48 +693,4 @@
             width: 28px;
             height: 28px;
         }
-
-    .sidebar-logout {
-        margin-top: auto; /* 推到底部 */
-        width: 100%;
-    }
-
-        .sidebar-logout button {
-            width: 100%;
-            padding: 10px 0;
-            background-color: #fff;
-            color: black;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 16px;
-        }
-
-            .sidebar-logout button:hover {
-                background-color: #0069D9;
-            }
-    .search-suggestions {
-          position: absolute;
-          top: 100%;
-          width: 90%;
-          background: #fff;
-          border: 1px solid #ddd;
-          border-radius: 8px;
-          margin-top: 6px;
-          padding: 0;
-          list-style: none;
-          z-index: 120;
-          box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-      }
-
-      .search-suggestions li {
-          padding: 10px 14px;
-          cursor: pointer;
-          font-size: 15px;
-          text-align: left;
-      }
-
-      .search-suggestions li:hover {
-          background-color: #f2f6ff;
-      }
 </style>

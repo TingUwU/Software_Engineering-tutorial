@@ -3,61 +3,35 @@
     <!-- 遮罩層 -->
     <div v-show="sidebarOpen" class="overlay" @click="toggleSidebar"></div>
 
-    <!-- 左側側邊欄 -->
+    <!-- 側邊欄（訪客） -->
     <div :class="['sidebar', { open: sidebarOpen }]">
       <div class="sidebar-user">
-        <img class="sidebar-avatar" :src="customer.photo || require('@/assets/logo.png')" alt="user">
-        <span class="username">{{ customer.nickname || '訪客' }}, 肚子餓了嗎</span>
+        <img class="sidebar-avatar" :src="require('@/assets/logo.png')" alt="guest">
+        <span class="username">訪客，肚子餓了嗎</span>
       </div>
+
       <ul>
-        <li @click="openUserModal">使用者資訊</li>
-        <router-link to="/cart"><li>購物車</li></router-link>
-        <router-link to="/order"><li>訂單管理</li></router-link>
-        <router-link to="/favorite"><li>收藏</li></router-link>
+        <router-link to="/nologincart"><li>購物車</li></router-link>
+        <li>訂單管理</li>
       </ul>
-      <div class="sidebar-logout">
-        <button @click="logout">登出</button>
+      <!-- 登入按鈕 -->
+      <div class="sidebar-login">
+        <button @click="goLogin">登入</button>
       </div>
     </div>
 
-    <!-- 使用者資訊 Modal -->
-    <div v-if="userModalOpen" class="modal-overlay" @click.self="closeUserModal">
-      <div class="user-modal">
-        <h3>使用者資訊</h3>
-        <form @submit.prevent="updateUserInfo">
-          <div class="form-group">
-            <label>頭像:</label>
-            <img :src="editCustomer.photo || require('@/assets/logo.png')" class="preview-avatar" alt="user">
-            <input type="file" @change="onAvatarChange" accept="image/*">
-          </div>
-          <div class="form-group">
-            <label>名稱:</label>
-            <input type="text" v-model="editCustomer.nickname">
-          </div>
-          <div class="form-group">
-            <label>電話:</label>
-            <input type="text" v-model="editCustomer.phone">
-          </div>
-          <div class="form-group">
-            <label>電子郵件:</label>
-            <input type="email" v-model="editCustomer.email">
-          </div>
-          <div class="modal-actions">
-            <button type="submit">儲存</button>
-            <button type="button" @click="closeUserModal">關閉</button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <!-- 左上角顧客頭像 -->
-    <img class="avatar" :src="customer.photo || require('@/assets/logo.png')" alt="user" @click="toggleSidebar">
+    <!-- 左上角訪客頭像 -->
+    <img
+      class="avatar"
+      :src="require('@/assets/logo.png')"
+      alt="guest"
+      @click="toggleSidebar"
+    >
 
     <!-- 購物車內容 -->
     <div class="cart-container">
-
       <div class="cart-items">
-        <template v-if="cart.items && cart.items.length > 0">
+        <template v-if="cart.items.length">
           <div
             v-for="(item, index) in cart.items"
             :key="index"
@@ -68,81 +42,83 @@
             </div>
 
             <div class="item-info">
-              <h3 class="item-name">{{ item.itemName || '餐點名稱' }}</h3>
+              <h3 class="item-name">{{ item.itemName }}</h3>
               <p class="item-customization">
-                {{ (item.customization && item.customization.length > 0) ? item.customization.join('、') : '無客製化' }}
+                {{ item.customization?.length ? item.customization.join('、') : '無客製化' }}
               </p>
             </div>
 
             <div class="item-quantity">
-              <span class="quantity-label">數量</span>
+              <span>數量</span>
               <div class="quantity-row">
                 <button class="btn-quantity" @click="decreaseQuantity(index)">-</button>
                 <span class="quantity-display">{{ item.quantity }}</span>
                 <button class="btn-quantity" @click="increaseQuantity(index)">+</button>
               </div>
               <div class="subtotal-row">
-                <span class="item-subtotal">小計金額：${{ item.itemSubTotal || 0 }}</span>
+                小計：${{ item.itemSubTotal }}
               </div>
             </div>
 
             <div class="item-actions">
               <button class="btn-delete" @click="deleteItem(index)">
-                <!-- 使用 Font Awesome 或 SVG 垃圾桶圖案 -->
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-trash-2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6L17.5 19H6.5L5 6m5 0V4a2 2 0 0 1 2-2h0a2 2 0 0 1 2 2v2"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
+                     fill="none" stroke="white" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round"
+                     viewBox="0 0 24 24">
+                  <polyline points="3 6 5 6 21 6"/>
+                  <path d="M19 6L17.5 19H6.5L5 6"/>
+                  <path d="M10 11v6M14 11v6"/>
+                </svg>
               </button>
             </div>
           </div>
         </template>
 
-        <div v-else class="empty-cart">
-          購物車是空的
-        </div>
+        <div v-else class="empty-cart">購物車是空的</div>
       </div>
-    
 
-
+      <!-- 訂單區 -->
       <div class="order-section">
-        <!-- 第一行：備註 -->
         <div class="order-row notes-row">
-          <label for="remarks">備註</label>
-          <input type="text" id="remarks" v-model="remarks" placeholder="請輸入完整備註" />
+          <label>備註</label>
+          <input v-model="remarks" placeholder="請輸入備註" />
         </div>
 
-        <!-- 第二行：用餐方式 -->
         <div class="order-row dining-row">
-          <div class="dining-option">
-            <label>
-              <input type="radio" v-model="orderType" value="內用" />
-              內用
-            </label>
-            <label>
-              <input type="radio" v-model="orderType" value="外帶" />
-              外帶
-            </label>
+          <label><input type="radio" v-model="orderType" value="內用"> 內用</label>
+          <label><input type="radio" v-model="orderType" value="外帶"> 外帶</label>
+
+          <div v-if="orderType==='內用'">
+            桌號 <input v-model="tableNumber" />
           </div>
-          <div class="time-setting" v-if="orderType==='內用'">
-            桌號: <input type="text" v-model="tableNumber" placeholder="請輸入桌號"/>
-          </div>
-          <div class="time-setting" v-if="orderType==='外帶'">
-            取餐時間: <input type="time" v-model="takeoutTime"/>
+          <div v-if="orderType==='外帶'">
+            <div>
+              取餐時間
+              <input type="time" v-model="takeoutTime" />
+            </div>
+
+            <div>
+              手機號碼
+              <input
+                type="tel"
+                v-model="phoneNumber"
+                placeholder="請輸入手機號碼"
+              />
+            </div>
           </div>
         </div>
 
-        <!-- 第三行：總金額 + 支付方式 -->
         <div class="order-row total-row">
-          <div class="total-amount">總金額：${{ cart.totalAmount || 0 }}</div>
-          <div class="payment-method">
-            支付方式:
-            <select v-model="paymentMethod">
-              <option value="現金">現金</option>
-              <option value="LinePay">LinePay</option>
-              <option value="ApplePay">ApplePay</option>
-            </select>
-          </div>
+          <div>總金額：${{ cart.totalAmount }}</div>
+          <select v-model="paymentMethod">
+            <option disabled value="">選擇付款方式</option>
+            <option>現金</option>
+            <option>LinePay</option>
+            <option>ApplePay</option>
+          </select>
         </div>
 
-        <!-- 第四行：按鈕 -->
         <div class="order-row action-row">
           <button class="btn-back" @click="goBack">繼續購物</button>
           <button class="btn-checkout" @click="checkout">前往結帳</button>
@@ -161,121 +137,66 @@ const router = useRouter()
 const store = useStore()
 
 const sidebarOpen = ref(false)
-const userModalOpen = ref(false)
-const editCustomer = ref({ photo: '' })
-
 const remarks = ref('')
 const orderType = ref('外帶')
 const tableNumber = ref('')
-const takeoutTime = ref(null)
-const customerPhone = ref('')
+const takeoutTime = ref('')
 const paymentMethod = ref('')
-
-// Cart computed
+const phoneNumber = ref('')
+// 購物車
 const cart = computed(() => ({
   items: store.state.cart.items || [],
   totalAmount: store.getters['cart/totalAmount'] || 0
 }))
 
-const customer = computed(() => store.getters['user/customer'] || {})
-
-// Methods
-const toggleSidebar = () => (sidebarOpen.value = !sidebarOpen.value)
-const openUserModal = () => { editCustomer.value = { ...customer.value }; userModalOpen.value = true }
-const closeUserModal = () => (userModalOpen.value = false)
-
-const onAvatarChange = (event) => {
-  const file = event.target.files[0]
-  if (file) {
-    const reader = new FileReader()
-    reader.onload = e => editCustomer.value.photo = e.target.result
-    reader.readAsDataURL(file)
-  }
-}
-
-const logout = () => {
-  store.dispatch('user/logout')
-  localStorage.removeItem('token')
-  localStorage.removeItem('user')
-  router.push('/login')
-}
-
+const toggleSidebar = () => sidebarOpen.value = !sidebarOpen.value
 const goBack = () => router.back()
 
-const deleteItem = (index) => store.dispatch('cart/removeItem', index)
-const increaseQuantity = (index) => store.dispatch('cart/updateItemQuantity', {
-  index,
-  quantity: (store.state.cart.items[index]?.quantity || 0) + 1
-})
-const decreaseQuantity = (index) => {
-  const qty = store.state.cart.items[index]?.quantity || 1
-  if (qty > 1) store.dispatch('cart/updateItemQuantity', { index, quantity: qty - 1 })
-}
-
-
-
-
-const updateUserInfo = async () => {
-  try {
-    const userId = editCustomer.value.id
-    const updates = { ...editCustomer.value }
-    delete updates.id
-    await store.dispatch('user/updateUser', { userId, updates })
-    alert('使用者資訊已更新！')
-    closeUserModal()
-  } catch (err) {
-    console.error(err)
-    alert('更新失敗，請稍後再試: ' + err.message)
+const deleteItem = index => store.dispatch('cart/removeItem', index)
+const increaseQuantity = index =>
+  store.dispatch('cart/updateItemQuantity', {
+    index,
+    quantity: cart.value.items[index].quantity + 1
+  })
+const decreaseQuantity = index => {
+  const q = cart.value.items[index].quantity
+  if (q > 1) {
+    store.dispatch('cart/updateItemQuantity', { index, quantity: q - 1 })
   }
 }
-
-const checkout = async () => {
+const goLogin = () => {
+  router.push('/login')
+}
+const checkout = () => {
   if (!cart.value.items.length) return alert('購物車是空的')
-
-  // 驗證必填欄位
-  if (orderType.value === '內用' && (!tableNumber.value || tableNumber.value.trim() === '')) {
-    return alert('請填寫桌號')
-  } else if (orderType.value === '外帶' && (!takeoutTime.value || takeoutTime.value.trim() === '')) {
-    return alert('請填寫取餐時間')
-  }
-
-  if (!paymentMethod.value || paymentMethod.value.trim() === '') {
-    return alert('請選擇付款方式')
-  }
-
+  if (orderType.value === '內用' && !tableNumber.value) return alert('請輸入桌號')
+ if (orderType.value === '外帶') {
+  if (!takeoutTime.value) return alert('請選擇取餐時間')
+  if (!phoneNumber.value) return alert('請輸入手機號碼')
+}
+  if (!paymentMethod.value) return alert('請選擇付款方式')
+ 
   const orderData = {
     storeId: store.state.cart.storeId,
-    customerId: customer.value.id || null,
-    customerPhone: customerPhone.value || '',
+    customerId: null,
     orderType: orderType.value,
-    dineInDetail: orderType.value === '內用' ? { tableNumber: tableNumber.value } : null,
-    takeoutDetail: orderType.value === '外帶' ? { takeoutTime: takeoutTime.value } : null,
-    items: cart.value.items.map(item => ({
-      menuItemId: item.menuItemId,
-      itemName: item.itemName,
-      quantity: item.quantity,
-      unitPrice: item.unitPrice,
-      customization: item.customization,
-      itemSubTotal: item.itemSubTotal
-    })),
+    dineInDetail: orderType.value === '內用'
+      ? { tableNumber: tableNumber.value }
+      : null,
+    takeoutDetail: orderType.value === '外帶'
+      ? {
+          takeoutTime: takeoutTime.value,
+          phoneNumber: phoneNumber.value
+        }
+      : null,
+    items: cart.value.items,
     totalAmount: cart.value.totalAmount,
     remarks: remarks.value,
     paymentMethod: paymentMethod.value
   }
 
-  try {
-    // 使用 Vuex order store 建立訂單
-    const createdOrder = await store.dispatch('order/createOrder', orderData)
-
-    // 清空購物車
-    store.dispatch('cart/clearCart')
-
-    // 跳轉到訂單頁面，帶參數 orderId
-    router.push({ name: 'OrderView', query: { orderId: createdOrder.id } })
-  } catch (err) {
-    console.error(err)
-    alert('訂單建立失敗，請稍後再試: ' + err.message)
-  }
+  console.log('訪客訂單資料:', orderData)
+  alert('訪客訂單資料已準備完成（請看 console）')
 }
 </script>
 
@@ -353,9 +274,29 @@ const checkout = async () => {
 .sidebar ul { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:15px; }
 .sidebar li { color:#fff; cursor:pointer; padding:10px 0; border-radius:4px; text-align: left;}
 .sidebar li:hover { background:#001633; }
-.sidebar-logout { margin-top:auto; }
-.sidebar-logout button { width:100%; padding:10px 0; background:#fff; color:black; border:none; border-radius:6px; cursor:pointer; }
-.sidebar-logout button:hover { background:#0069D9; color:#fff; }
+.sidebar-login {
+  margin-top: auto; /* 推到最下面 */
+  width: 100%;            /* 確保整個區塊滿寬 */
+  padding: 0 0;           /* 避免多餘 padding */
+}
+
+.sidebar-login button {
+  width: 100%;           /* 滿寬 */
+  padding: 20px 0;       /* 高度增加，點擊範圍更大 */
+  font-size: 20px;       /* 文字更大 */
+  background: #0069D9;   /* 主色 */
+  color: #fff;
+  border: none;
+  border-radius: 16px;   /* 圓角更大 */
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.3s;
+  text-align: center;    /* 文字置中 */
+}
+
+.sidebar-login button:hover {
+  background: #0056b3;   /* hover 顏色 */
+}
 .avatar { position: fixed; top:20px; left:20px; width:50px; height:50px; border-radius:50%; cursor:pointer; z-index:101; }
 .preview-avatar { width:80px; height:80px; border-radius:50%; object-fit:cover; margin-bottom:8px; }
 
@@ -531,3 +472,4 @@ const checkout = async () => {
   padding: 6px;
 }
 </style>
+

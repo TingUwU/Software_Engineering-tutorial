@@ -12,10 +12,12 @@
             <ul>
                 <li @click="openUserModal">使用者資訊</li>
                 <router-link to="/cart"><li>購物車</li></router-link>
-                <li>訂單管理</li>
-                <li>歷史</li>
-                <li>收藏</li>
+                <router-link to="/order"><li>訂單管理</li></router-link>
+                <router-link to="/favorite"><li>收藏</li></router-link>
             </ul>
+            <div class="sidebar-logout">
+                <button @click="logout">登出</button>
+            </div>
         </div>
 
         <!-- 左上角顧客頭像 -->
@@ -25,7 +27,7 @@
         <div class="shop-header">
             <h2 class="shop-name">{{ shop.name }}</h2>
             <button class="favorite-btn"
-                    :class="{ active: isFavorited(shop), animate: animateFavorites[shop._id] }"
+                    :class="{ active: isFavorited(shop), animate: animateFavorites[shop.id] }"
                     @click="toggleFavoriteWithAnimation(shop)">
                 <span v-if="isFavorited(shop)">❤️</span>
                 <span v-else>🤍</span>
@@ -47,6 +49,18 @@
                     <line x1="21" y1="21" x2="16.65" y2="16.65" />
                 </svg>
             </button>
+            <ul
+                v-if="searchSuggestions.length"
+                class="search-suggestions"
+            >
+                <li
+                    v-for="item in searchSuggestions"
+                    :key="item.id"
+                    @click="selectSuggestion(item)"
+                    >
+                    {{ item.itemName }}
+                    </li>
+            </ul>
         </div>
 
         <!-- 菜品分類與滾輪 -->
@@ -55,7 +69,7 @@
             <div class="slider-container">
                 <button class="scroll-btn left" @click="scrollLeft(category.name)">&#8249;</button>
                 <div :ref="el => categoryRefs[category.name] = el" class="slider">
-                    <div v-for="dish in category.dishes" :key="dish._id" class="dish-card">
+                    <div v-for="dish in category.dishes" :key="dish.id" class="dish-card" @click="openMenuItem(dish)">
                         <img :src="dish.imgUrl || require('@/assets/logo.png')" class="shop-img" alt="菜品圖片">
                         <p class="dish-name">{{ dish.itemName }}</p>
                         <p class="dish-price">{{ dish.price }} 元</p>
@@ -88,7 +102,7 @@
                         <input type="email" v-model="editCustomer.email">
                     </div>
                     <div class="modal-actions">
-                        <button type="submit">儲存</button>
+                        <button type="submit" @click="updateUserInfo">儲存</button>
                         <button type="button" @click="closeUserModal">關閉</button>
                     </div>
                 </form>
@@ -103,57 +117,80 @@
                 <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
             </svg>
         </router-link>
+
+        <!-- MenuItem Modal -->
+        <MenuItem
+            :show="menuItemModalOpen"
+            :product="selectedProduct"
+            :isFavorited="isItemFavorited(selectedProduct.id)"
+            @close="closeMenuItem"
+            @add-to-cart="handleAddToCart"
+            @toggle-favorite="toggleItemFavorite"
+        />
     </div>
 </template>
 
 <script>
+    import MenuItem from '@/components/MenuItem.vue';
+
     export default {
+        components: {
+            MenuItem
+        },
         data() {
             return {
                 sidebarOpen: false,
                 userModalOpen: false,
+                menuItemModalOpen: false,
                 keyword: "",
-                customer: {
-                    _id: "c1",
-                    account: "user001",
-                    nickname: "使用者名稱",
-                    phone: "0912345678",
-                    email: "user001@test.com",
-                    photo: "",
-                    favorStores: [],
-                    favorItems: [],
-                    customCombos: []
+                selectedProduct: {
+                    id: '',
+                    itemName: '',
+                    price: 0
                 },
                 editCustomer: { photo: "" },
-                shop: {
-                    _id: "s1",
-                    name: "小王豆漿",
-                    address: "台北市大同區",
-                    businessHours: [
-                        { day: "Mon", start: "07:00", close: "14:00" },
-                        { day: "Tue", start: "07:00", close: "14:00" },
-                        { day: "Wed", start: "07:00", close: "14:00" },
-                    ],
-                    menu: [
-                        { _id: "d1", itemName: "豆漿", price: 25, imgUrl: "", tag: "中式早餐" },
-                        { _id: "d2", itemName: "油條", price: 15, imgUrl: "", tag: "中式早餐" },
-                        { _id: "d3", itemName: "飯糰", price: 30, imgUrl: "", tag: "小吃" },
-                        { _id: "d4", itemName: "包子", price: 20, imgUrl: "", tag: "小吃" },
-                    ]
-                },
+                shop: null, // 初始為 null，等待從 store 載入
                 categoryRefs: {},
                 animateFavorites: {}, // 每個店家動畫狀態
             }
         },
+        created() {
+            // 組件創建時載入店家資料
+            this.loadShop()
+        },
+        watch: {
+            // 監聽路由變化，切換店家時重新載入資料
+            '$route.params.id': function(newId) {
+                if (newId) {
+                    this.loadShop()
+                }
+            }
+        },
         computed: {
+            searchSuggestions() {
+                const key = this.keyword.trim().toLowerCase();
+                if (!key || !this.shop || !this.shop.menu) return [];
+
+                return this.shop.menu
+                    .filter(item =>
+                        item.itemName.toLowerCase().includes(key)
+                    )
+                    .slice(0, 5); // 最多 5 筆
+            },
+            // 從 Vuex 獲取用戶資料
+            customer() {
+                return this.$store.getters['user/customer']
+            },
             // 取得今天營業時間
             todayBusiness() {
+                if (!this.shop) return {};//防止還沒加載出來就被訪問
                 const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                 const today = days[new Date().getDay()];
-                return this.shop.businessHours.find(h => h.day === today) || {};
+                return this.shop.businessHours.find(h => h.day === today) || {};//找到今天營業時間來決定顯示是否營業中
             },
-            // 根據關鍵字過濾分類
+            // 根據關鍵字過濾
             filteredCategories() {
+                if (!this.shop || !this.shop.menu) return [];
                 const categoriesMap = {};
                 this.shop.menu.forEach(item => {
                     if (this.keyword && !item.itemName.includes(this.keyword)) return;
@@ -164,15 +201,46 @@
             }
         },
         methods: {
+            selectSuggestion(item) {
+                this.keyword = item.itemName;
+
+                this.openMenuItem(item); // 直接開啟 MenuItem Modal
+            },
+            // 根據路由參數載入店家資料
+            loadShop() {
+                const shopId = this.$route.params.id;
+                const shop = this.$store.getters['shops/getShopById'](shopId);
+                if (shop) {
+                    this.shop = shop;
+                } else {
+                    // 如果找不到店家，顯示錯誤或導航回首頁
+                    alert('找不到該店家');
+                    this.$router.push('/');
+                }
+            },
+
             toggleSidebar() { this.sidebarOpen = !this.sidebarOpen; },
             openUserModal() { this.editCustomer = { ...this.customer }; this.userModalOpen = true; },
             closeUserModal() { this.userModalOpen = false; },
-            updateUser() {
-                this.customer = { ...this.editCustomer };
-                this.closeUserModal();
-                alert("使用者資訊已更新！");
-                // TODO: call API to save user info
+            async updateUserInfo() {
+                try {
+                    const userId = this.editCustomer.id;
+                    const updates = { ...this.editCustomer };
+                    delete updates.id;
+
+                    console.log('Sending updates:', userId, updates); // ✅
+
+                    const result = await this.$store.dispatch('user/updateUser', { userId, updates });
+
+                    console.log('Update result:', result); // ✅
+                    alert('使用者資訊已更新！');
+                    this.closeUserModal();
+                } catch (err) {
+                    console.error(err);
+                    alert('更新失敗，請稍後再試: ' + err.message);
+                }
             },
+            
             onAvatarChange(event) {
                 const file = event.target.files[0];
                 if (file) {
@@ -190,27 +258,64 @@
                 if (slider) slider.scrollBy({ left: 200, behavior: 'smooth' });
             },
             isFavorited(shop) {
-                return this.customer.favorStores.includes(shop._id);
+                return this.$store.getters['user/isStoreFavorited'](shop.id);
             },
             toggleFavorite(shop) {
-                if (this.isFavorited(shop)) {
-                    this.customer.favorStores = this.customer.favorStores.filter(id => id !== shop._id);
-                } else {
-                    this.customer.favorStores.push(shop._id);
-                }
+                this.$store.dispatch('user/toggleFavorStore', shop.id);
                 // TODO: call API to save favorStores
             },
             toggleFavoriteWithAnimation(shop) {
                 this.toggleFavorite(shop);
 
-                // 使用展開運算符創建新對象，保持響應性
-                this.animateFavorites = { ...this.animateFavorites, [shop._id]: true };
+                // 保持白心或紅心
+                this.animateFavorites = { ...this.animateFavorites, [shop.id]: true };
 
                 setTimeout(() => {
-                    this.animateFavorites = { ...this.animateFavorites, [shop._id]: false };
+                    this.animateFavorites = { ...this.animateFavorites, [shop.id]: false };
                 }, 300);
+            },
+            openMenuItem(dish) {
+                this.selectedProduct = {
+                    id: dish.id,
+                    itemName: dish.itemName,
+                    price: dish.price
+                };
+                this.menuItemModalOpen = true;
+            },
+            closeMenuItem() {
+                this.menuItemModalOpen = false;
+            },
+            handleAddToCart(cartItem) {
+                console.log('加入購物車:', cartItem);
+                // 設定店家 ID 到購物車
+                this.$store.dispatch('cart/setStoreId', this.shop.id);
+                // 加入商品到購物車
+                this.$store.dispatch('cart/addItem', cartItem);
+            },
+            // 檢查商品是否已收藏
+            isItemFavorited(itemId) {
+                return this.$store.getters['user/isItemFavorited'](this.shop.id, itemId);
+            },
+            // 切換商品收藏狀態
+            toggleItemFavorite() {
+                const itemId = this.selectedProduct.id;
+                const storeId = this.shop.id;
+                
+                this.$store.dispatch('user/toggleFavorItem', { storeId, itemId }).then(isFavorited => {
+                    if (isFavorited) {
+                        alert('已加入收藏');
+                    } else {
+                        alert('已取消收藏');
+                    }
+                });
+                // TODO: call API to save favorItems
+            },
+            logout() {
+                this.$store.dispatch('user/logout'); // 呼叫 Vuex logout
+                localStorage.removeItem('token');    // 如果有 token
+                localStorage.removeItem('user');
+                this.$router.push('/login');         // 導向登入頁
             }
-
         }
     }
 </script>
@@ -438,6 +543,22 @@
         }
 
     /* 菜品卡片 */
+    .dish-card {
+        min-width: 160px;
+        flex-shrink: 0;
+        border-radius: 12px;
+        background: #fff;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        text-align: center;
+        padding-bottom: 10px;
+        transition: transform 0.3s;
+        cursor: pointer;
+    }
+
+        .dish-card:hover {
+            transform: scale(1.05);
+        }
+
     .shop-card {
         min-width: 160px;
         flex-shrink: 0;
@@ -455,6 +576,13 @@
         }
 
     .dish-img {
+        width: 100%;
+        height: 110px;
+        border-radius: 12px 12px 0 0;
+        object-fit: cover;
+    }
+
+    .shop-img {
         width: 100%;
         height: 110px;
         border-radius: 12px 12px 0 0;
@@ -605,4 +733,47 @@
     .favorite-btn.active span {
         color: red; /* 已收藏顯示紅色 */
     }
+    .sidebar-logout {
+        margin-top: auto; /* 推到底部 */
+        width: 100%;
+    }
+
+        .sidebar-logout button {
+            width: 100%;
+            padding: 10px 0;
+            background-color: #fff;
+            color: black;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+            .sidebar-logout button:hover {
+                background-color: #0069D9;
+            }
+    .search-suggestions {
+          position: absolute;
+          top: 100%;
+          width: 90%;
+          background: #fff;
+          border: 1px solid #ddd;
+          border-radius: 8px;
+          margin-top: 6px;
+          padding: 0;
+          list-style: none;
+          z-index: 120;
+          box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      }
+
+      .search-suggestions li {
+          padding: 10px 14px;
+          cursor: pointer;
+          font-size: 15px;
+          text-align: left;
+      }
+
+      .search-suggestions li:hover {
+          background-color: #f2f6ff;
+      }
 </style>
