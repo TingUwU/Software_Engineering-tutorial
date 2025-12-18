@@ -1,15 +1,12 @@
 <template>
-    <div class="order">
-        <!-- 遮罩層 -->
-        <div v-show="sidebarOpen" class="overlay" @click="toggleSidebar"></div>
-
-        <!-- 左側側邊欄 -->
-        <div :class="['sidebar', { open: sidebarOpen }]">
-            <div class="sidebar-user">
-                <img class="sidebar-avatar" :src="customer.photo || require('@/assets/logo.png')" alt="user">
-                <span class="username">{{ customer.nickname }}, 您好</span>
-            </div>
-            <ul>
+  <div class="order-page">
+    <!-- 左側側邊欄 -->
+    <div :class="['sidebar', { open: sidebarOpen }]">
+      <div class="sidebar-user">
+        <img class="sidebar-avatar" :src="customer.photo || require('@/assets/logo.png')" alt="user">
+        <span class="username">{{ customer.nickname || '訪客' }}</span>
+      </div>
+      <ul>
                 <li @click="openUserModal">使用者資訊</li>
                 <router-link to="/cart"><li>購物車</li></router-link>
                 <router-link to="/order"><li>訂單管理</li></router-link>
@@ -18,88 +15,55 @@
             <div class="sidebar-logout">
                 <button @click="logout">登出</button>
             </div>
-        </div>
-
-        <!-- 左上角顧客頭像 -->
-        <img class="avatar" :src="customer.photo || require('@/assets/logo.png')" alt="user" @click="toggleSidebar">
-
-        <!-- 主內容區：訂單管理卡片 -->
-        <div class="order-management">
-            <h2>訂單管理</h2>
-            <div class="order-cards">
-                <div class="order-card" v-for="order in orders" :key="order.id">
-                    <div class="order-header">
-                        <p><strong>訂單編號:</strong> {{ order.id }}</p>
-                        <p><strong>日期:</strong> {{ order.date }}</p>
-                        <p><strong>狀態:</strong> <span :class="'status-'+order.status">{{ order.status }}</span></p>
-                    </div>
-
-                    <div class="order-items">
-                        <h4>餐點明細:</h4>
-                        <ul>
-                            <li v-for="item in order.items" :key="item.id">
-                                {{ item.name }} x {{ item.quantity }} - {{ item.price * item.quantity }} 元
-                            </li>
-                        </ul>
-                    </div>
-
-                    <p><strong>總金額:</strong> {{ order.total }} 元</p>
-                    <p><strong>備註:</strong> {{ order.note || '無' }}</p>
-                    <p>
-                        <strong>用餐方式:</strong>
-                        {{ order.takeIn ? '內用' : '外帶' }} - 
-                        <span v-if="order.takeIn">桌號: {{ order.tableNumber }}</span>
-                        <span v-else>取餐時間: {{ order.pickupTime }}</span>
-                    </p>
-                    <p><strong>支付方式:</strong> {{ order.payment }}</p>
-                    <button @click="viewOrder(order)">查看詳情</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- 使用者資訊 Modal -->
-        <div v-if="userModalOpen" class="modal-overlay" @click.self="closeUserModal">
-            <div class="user-modal">
-                <h3>使用者資訊</h3>
-                <form @submit.prevent="updateUserInfo">
-                    <div class="form-group">
-                        <label>頭像:</label>
-                        <img :src="editCustomer.photo || require('@/assets/logo.png')" class="preview-avatar" alt="user">
-                        <input type="file" @change="onAvatarChange" accept="image/*">
-                    </div>
-                    <div class="form-group">
-                        <label>名稱:</label>
-                        <input type="text" v-model="editCustomer.nickname">
-                    </div>
-                    <div class="form-group">
-                        <label>電話:</label>
-                        <input type="text" v-model="editCustomer.phone">
-                    </div>
-                    <div class="form-group">
-                        <label>電子郵件:</label>
-                        <input type="email" v-model="editCustomer.email">
-                    </div>
-                    <div class="modal-actions">
-                        <button type="submit">儲存</button>
-                        <button type="button" @click="closeUserModal">關閉</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <!-- 右下角購物車快捷 -->
-        <router-link to="/cart" class="cart-btn">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="24" height="24">
-                <circle cx="9" cy="21" r="1" />
-                <circle cx="20" cy="21" r="1" />
-                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
-            </svg>
-        </router-link>
     </div>
+
+    <!-- 左上角顧客頭像 -->
+    <img class="avatar" :src="customer.photo || require('@/assets/logo.png')" alt="user" @click="toggleSidebar">
+
+    <!-- 訂單列表 -->
+    <div class="order-management">
+      <h2>訂單管理</h2>
+
+      <div class="order-cards">
+        <div class="order-card" v-for="order in orders" :key="order.id">
+          <div class="order-header">
+            <p><strong>訂單編號:</strong> {{ order.id }}</p>
+            <p><strong>日期:</strong> {{ order.date }}</p>
+            <p><strong>狀態:</strong> <span :class="'status-'+order.status">{{ order.status }}</span></p>
+          </div>
+
+          <div class="order-items">
+            <h4>餐點明細:</h4>
+            <ul>
+              <li v-for="item in order.items" :key="item.id">
+                {{ item.name }} x {{ item.quantity }} - {{ item.price * item.quantity }} 元
+              </li>
+            </ul>
+          </div>
+
+          <p><strong>總金額:</strong> {{ order.total }} 元</p>
+
+          <p>
+            <strong>用餐方式:</strong>
+            {{ order.takeIn ? '內用' : '外帶' }}
+            <span v-if="order.takeIn"> - 桌號: {{ order.tableNumber }}</span>
+            <span v-else> - 取餐時間: {{ order.pickupTime }}</span>
+          </p>
+          <p><strong>支付方式:</strong> {{ order.payment }}</p>
+
+          <div class="order-actions">
+            <button @click="viewOrder(order)">查看詳情</button>
+            <button @click="deleteOrder(order.id)">刪除</button>
+          </div>
+        </div>
+      </div>
+
+      
+    </div>
+  </div>
 </template>
 
 <script>
-import { getOrders } from '../store/order.js'
 import { mapGetters } from 'vuex'
 
 export default {
@@ -107,7 +71,6 @@ export default {
     return {
       sidebarOpen: false,
       userModalOpen: false,
-      editCustomer: { photo: "" },
       orders: []
     }
   },
@@ -115,46 +78,48 @@ export default {
     ...mapGetters('user', ['customer'])
   },
   async created() {
-    if (this.customer.id) {
+    if (this.customer && this.customer.id) {
       await this.fetchOrders()
     }
   },
   methods: {
     toggleSidebar() { this.sidebarOpen = !this.sidebarOpen },
-    openUserModal() { this.editCustomer = { ...this.customer }; this.userModalOpen = true },
+    openUserModal() { this.userModalOpen = true },
     closeUserModal() { this.userModalOpen = false },
+
     async fetchOrders() {
       try {
-        this.orders = await getOrders(this.customer.id)
+        const data = await this.$store.dispatch('order/fetchOrders')
+        this.orders = data
       } catch (err) {
         console.error(err)
         alert('取得訂單失敗: ' + err.message)
       }
     },
-    onAvatarChange(event) {
-      const file = event.target.files[0]
-      if (file) {
-        const reader = new FileReader()
-        reader.onload = e => { this.editCustomer.photo = e.target.result }
-        reader.readAsDataURL(file)
-      }
+
+    viewOrder(order) {
+      alert(`查看訂單 ${order.id} (模擬功能)`)
     },
-    async updateUserInfo() {
+
+    async deleteOrder(orderId) {
+      if (!confirm('確定要刪除這筆訂單嗎？')) return
       try {
-        await this.$store.dispatch('user/updateUser', { userId: this.customer.id, updates: this.editCustomer })
-        alert('使用者資訊已更新')
-        this.closeUserModal()
+        await this.$store.dispatch('order/deleteOrder', orderId)
+        alert('刪除成功')
+        await this.fetchOrders() // 更新列表
       } catch (err) {
         console.error(err)
-        alert('更新失敗: ' + err.message)
+        alert('刪除失敗: ' + err.message)
       }
     },
-    logout() { this.$store.dispatch('user/logout'); this.$router.push('/login') },
-    viewOrder(order) { alert(`查看訂單 ${order.id} (模擬功能)`) }
+
+    logout() {
+      this.$store.dispatch('user/logout')
+      this.$router.push('/login')
+    }
   }
 }
 </script>
-
 <style scoped>
 .order {
     font-family: "Microsoft JhengHei","PingFang TC","Noto Sans TC",sans-serif;
