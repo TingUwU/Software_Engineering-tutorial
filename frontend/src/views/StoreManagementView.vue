@@ -187,38 +187,48 @@ export default {
     methods: {
 
         async loadOwnerStore() {
-            try{
-                const userId=this.customer.id;
-                if(!userId){
+            try {
+                const userId = this.customer.id;
+                if (!userId) {
                     alert('請先登入');
                     this.$router.push('/login');
                     return;
                 }
 
-                const res =await fetch('http://localhost:3000/api/stores');
-                const stores =await res.json();
-
-                const myStore=stores.find(store => store.ownerId===userId);
+                console.log('正在載入店家資料，用戶ID:', userId);
                 
-                if(!myStore){
-                    console.log('找不到店家');
-                    this.menuItems=[];
-                    this.categories=[];
+                const res = await fetch('http://localhost:3000/api/stores');
+                if (!res.ok) {
+                    throw new Error(`HTTP ${res.status}: 無法取得店家列表`);
+                }
+                
+                const stores = await res.json();
+                console.log('取得店家列表:', stores.length, '家店');
+
+                const myStore = stores.find(store => store.ownerId === userId);
+                
+                if (!myStore) {
+                    console.log('找不到屬於該用戶的店家，可能尚未建立店家');
+                    this.menuItems = [];
+                    this.categories = [];
+                    alert('尚未建立店家，請先到「店家設定」頁面建立店家');
                     return;
                 }
 
-                this.storeId=myStore.id;
-                this.currentStore=myStore;
-                this.menuItems=myStore.menu||[];
+                this.storeId = myStore.id;
+                this.currentStore = myStore;
+                this.menuItems = myStore.menu || [];
 
-                const tags=[...new Set(this.menuItems.map(item => item.tag))];
-                this.categories=tags.filter(tag => tag);//過濾空值
+                // 從菜單項目的 tag 提取分類
+                const tags = [...new Set(this.menuItems.map(item => item.tag))];
+                this.categories = tags.filter(tag => tag); // 過濾空值
 
-                console.log('載入店家成功:', myStore.name);
-                console.log('菜單項目:', this.menuItems.length);
-                console.log('分類:', this.categories);
-            } catch(err){
-                console.error('載入店家失敗:', err);
+                console.log('✅ 載入店家成功:', myStore.name);
+                console.log('  - 店家ID:', this.storeId);
+                console.log('  - 菜單項目:', this.menuItems.length, '個');
+                console.log('  - 分類:', this.categories);
+            } catch (err) {
+                console.error('❌ 載入店家失敗:', err);
                 alert('載入店家失敗: ' + err.message);
             }
         },
@@ -256,24 +266,24 @@ export default {
                 alert('此分類已存在');
                 return;
             }
+            // 新增分類到前端列表（分類會在創建餐點時才真正保存到後端）
             this.categories.push(categoryName);
-            alert('分類已新增！');
+            alert(`分類「${categoryName}」已新增！請創建餐點以保存此分類。`);
             this.closeCategoryModal();
-            // TODO: 之後可以改為呼叫 API
         },
 
         deleteCategory(category) {
             const itemsInCategory = this.menuItems.filter(item => item.tag === category);
             if (itemsInCategory.length > 0) {
-                alert('請先刪除所有餐點後再刪除分類');
+                alert(`無法刪除分類「${category}」：請先刪除該分類下的所有 ${itemsInCategory.length} 個餐點`);
                 return;
             }
             if (confirm(`確定要刪除「${category}」分類嗎？`)) {
                 const index = this.categories.indexOf(category);
                 if (index !== -1) {
                     this.categories.splice(index, 1);
+                    alert(`分類「${category}」已刪除`);
                 }
-                // TODO: 之後可以改為呼叫 API
             }
         },
 
@@ -289,7 +299,8 @@ export default {
                 isAvailable: true,
                 price: 0,
                 tag: this.categories[0],
-                imgUrl: ''
+                imgUrl: '',
+                customOptions: []
             };
             this.menuItemModalOpen = true;
         },
@@ -309,74 +320,102 @@ export default {
                     alert('找不到店家');
                     return;
                 }
-                    let isNewItem=!updatedItem.id;
+                let isNewItem = !updatedItem.id || updatedItem.id === '';
 
-                if (updatedItem.id) {
+                if (updatedItem.id && updatedItem.id !== '') {
                     // 編輯現有餐點
                     const index = this.menuItems.findIndex(item => item.id === updatedItem.id);
                     if (index !== -1) {
                         this.menuItems.splice(index, 1, updatedItem);
                     }
                 } else {
-                    // 新增餐點
-                    this.menuItems.push(updatedItem);
+                    // 新增餐點 - 移除空的 id 字段
+                    // eslint-disable-next-line no-unused-vars
+                    const { id, ...itemWithoutId } = updatedItem;
+                    this.menuItems.push(itemWithoutId);
                 }
-                //發送到後端
-                const res=await fetch(`http://localhost:3000/api/stores/${this.storeId}/menu`,{
-                    method: 'PUT',
-                    headers:{
-                        'Content-Type': 'application/json',
-                        'Authorization':`Bearer ${this.customer.id}`
-                    },
-                    body: JSON.stringify(this.menuItems)
+                
+                // 清理菜單項目：移除空的 id 字段
+                const cleanedMenuItems = this.menuItems.map(item => {
+                    if (!item.id || item.id === '') {
+                        // eslint-disable-next-line no-unused-vars
+                        const { id, ...rest } = item;
+                        return rest;
+                    }
+                    return item;
                 });
-                if(!res.ok){
-                    const errorText= await res.text();
-                    throw new Error(errorText||'儲存失敗');
+                
+                // 發送到後端
+                const res = await fetch(`http://localhost:3000/api/stores/${this.storeId}/menu`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${this.customer.id}`
+                    },
+                    body: JSON.stringify(cleanedMenuItems)
+                });
+                
+                if (!res.ok) {
+                    const errorText = await res.text();
+                    throw new Error(errorText || '儲存失敗');
                 }
 
-                const updatedStore= await res.json();
+                const updatedStore = await res.json();
+                this.menuItems = updatedStore.menu || [];
+                this.currentStore = updatedStore;
 
-                this.menuItems= updatedStore.menu||[];
-                this.currentStore= updatedStore;
+                // 重新從菜單項目提取分類（確保分類與餐點同步）
+                const tags = [...new Set(this.menuItems.map(item => item.tag))];
+                this.categories = tags.filter(tag => tag);
 
-                alert(isNewItem?'餐點已新增！':'餐點已更新！');
+                alert(isNewItem ? '餐點已新增！' : '餐點已更新！');
+                console.log('更新後的分類:', this.categories);
 
             } catch (err) {
                 console.error('儲存失敗:', err);
-                alert('儲存失敗，請稍後再試');
+                alert('儲存失敗，請稍後再試: ' + err.message);
             }
         },
 
         async deleteItem(itemId) {
-            try{
-                if(!this.storeId){
+            try {
+                if (!this.storeId) {
                     alert('找不到店家');
                     return;
                 }
+                
+                // 本地刪除
                 const index = this.menuItems.findIndex(item => item.id === itemId);
                 if (index !== -1) {
                     this.menuItems.splice(index, 1);
-                }//本地刪除
+                }
 
-                const res= await fetch(`http://localhost:3000/api/stores/${this.storeId}/menu`,{
+                // 發送到後端
+                const res = await fetch(`http://localhost:3000/api/stores/${this.storeId}/menu`, {
                     method: 'PUT',
-                    headers:{
+                    headers: {
                         'Content-Type': 'application/json',
-                        'Authorization':`Bearer ${this.customer.id}`
+                        'Authorization': `Bearer ${this.customer.id}`
                     },
                     body: JSON.stringify(this.menuItems)
                 });
 
-                if(!res.ok){
-                    throw new Error('刪除失敗');
+                if (!res.ok) {
+                    const errorText = await res.text();
+                    throw new Error(errorText || '刪除失敗');
                 }
 
-                const updateStore= await res.json();
-                this.menuItems= updateStore.menu||[];
+                const updatedStore = await res.json();
+                this.menuItems = updatedStore.menu || [];
+                
+                // 重新從菜單項目提取分類（刪除餐點後，如果某分類沒有餐點了，該分類會自動消失）
+                const tags = [...new Set(this.menuItems.map(item => item.tag))];
+                this.categories = tags.filter(tag => tag);
 
                 alert('餐點已刪除！');
-            } catch(err){
+                console.log('更新後的分類:', this.categories);
+                
+            } catch (err) {
                 console.error('刪除失敗:', err);
                 alert('刪除失敗: ' + err.message);
             } 

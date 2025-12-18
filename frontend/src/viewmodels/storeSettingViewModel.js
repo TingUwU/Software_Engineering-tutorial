@@ -18,9 +18,11 @@ export default function useStoreSettingViewModel() {
   function validate() {
     const errs = [];
     if (!store.name?.trim()) errs.push('店家名稱為必填');
+    if (!store.category?.trim()) errs.push('店家種類為必填');
     if (!store.address?.trim()) errs.push('店家地址為必填');
     const [L, A] = store.coordinates || [];
     if (!Number.isFinite(L) || !Number.isFinite(A)) errs.push('經緯度需為數值');
+    if (!store.ownerId?.trim()) errs.push('店主ID缺失（請重新登入）');
     return errs;
   }
 
@@ -44,25 +46,34 @@ export default function useStoreSettingViewModel() {
 
     store.updatedAt = new Date();
 
-    // TODO: 呼叫後端 API 建立或更新店家設定
-    // 範例：
-    // const res = await fetch('/api/stores', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({
-    //     ...store,
-    //     updatedAt: new Date().toISOString(),
-    //   }),
-    // });
-    // const data = await res.json();
+    try {
+      // 呼叫後端 API 建立店家
+      const res = await fetch('http://localhost:3000/api/stores', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${store.ownerId}`
+        },
+        body: JSON.stringify({
+          ...store,
+          updatedAt: store.updatedAt.toISOString(),
+        }),
+      });
 
-    // 模擬：先以 console 代替
-    console.log('[TODO] 送往後端的資料:', {
-      ...store,
-      updatedAt: store.updatedAt.toISOString(),
-    });
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(errorText || '建立店家失敗');
+      }
 
-    return true;
+      const data = await res.json();
+      console.log('店家建立成功:', data);
+      
+      return true;
+    } catch (err) {
+      console.error('建立店家失敗:', err);
+      validationErrors.value.push(err.message);
+      return false;
+    }
   }
 
   // TODO: 若為編輯頁，可於此加入載入既有店家資料的動作（例如根據路由參數取得 _id）

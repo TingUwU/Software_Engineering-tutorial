@@ -165,36 +165,46 @@
                     .filter(shop => shop.name.toLowerCase().includes(key))
                     .slice(0, 5); // 最多顯示 5 筆
             },
-             // 使用者資料
+            
+            // 使用者資料
             customer() {
                 return this.$store.getters['user/customer']
             },
 
-            // 所有店家
+            // 所有店家（從後端獲取）
             allShops() {
                 return this.$store.getters['shops/allShops']
             },
+            
+            // 加載狀態
+            isLoading() {
+                return this.$store.getters['shops/isLoading']
+            },
 
-            // 中式店家（＋搜尋）
+            // 中式店家（根據 category 過濾）
             chineseShops() {
-                const chineseIds = ['store001', 'store002', 'c1', 'c2'];
-                const key = this.keyword.trim().toLowerCase();
-
-                return this.allShops.filter(shop =>
-                    chineseIds.includes(shop.id) &&
-                    shop.name.toLowerCase().includes(key)
+                return this.allShops.filter(shop => 
+                    shop.category === '中式' || 
+                    ['store001', 'store002', 'c1', 'c2'].includes(shop.id)
                 );
             },
 
-            // 西式店家（＋搜尋）
+            // 西式店家（根據 category 過濾）
             westernShops() {
-                const westernIds = ['store003', 'store004', 'w1', 'w2'];
-                const key = this.keyword.trim().toLowerCase();
-
-                return this.allShops.filter(shop =>
-                    westernIds.includes(shop.id) &&
-                    shop.name.toLowerCase().includes(key)
+                return this.allShops.filter(shop => 
+                    shop.category === '西式' || 
+                    ['store003', 'store004', 'w1', 'w2'].includes(shop.id)
                 );
+            }
+        },
+        
+        async mounted() {
+            // 從後端載入所有店家
+            try {
+                await this.$store.dispatch('shops/fetchAllShops')
+            } catch (err) {
+                console.error('載入店家失敗:', err);
+                alert('載入店家失敗，請稍後再試');
             }
         },
         methods: {
