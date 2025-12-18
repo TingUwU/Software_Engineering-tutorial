@@ -118,7 +118,6 @@ const props = defineProps({
   product: {
     type: Object,
     default: () => ({
-      id: '',
       itemName: '',
       price: 0,
       tag: '',
@@ -136,7 +135,7 @@ const props = defineProps({
 // Emits
 const emit = defineEmits(['close', 'save', 'delete'])
 
-// 編輯中的資料
+// 編輯中的資料（不包含 id，因为 id 会从 props.product 继承）
 const editItem = ref({
   itemName: '',
   price: 0,
@@ -179,10 +178,17 @@ const saveChanges = () => {
     return
   }
 
+  // 合併資料，只保留有效的 id
   const updatedItem = {
     ...props.product,
     ...editItem.value
   }
+  
+  // 如果 id 是空字符串或不存在，則移除它
+  if (!updatedItem.id || updatedItem.id === '') {
+    delete updatedItem.id
+  }
+  
   emit('save', updatedItem)
   closeModal()
 }

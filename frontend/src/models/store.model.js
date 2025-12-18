@@ -9,11 +9,14 @@ export function createEmptyStore() {
   return {
     name: '',                 // required
     description: '',
+    ownerId: '',              // required (from logged-in user)
     phone: '',
     email: '',
     address: '',              // required
+    category: '',             // 店家類別（中式/西式）
     coordinates: [0, 0],      // [lng, lat], required
     businessHours: [],        // { day, start, end, note }[]
+    menu: [],                 // 菜單（MenuItem[]）
     isActive: true,
     updatedAt: new Date(),    // 送出時更新
   };

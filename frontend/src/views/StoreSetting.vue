@@ -32,6 +32,14 @@
           <input v-model="vm.store.name" type="text" required />
         </div>
         <div class="row">
+          <label>店家種類*</label>
+          <select v-model="vm.store.category" required>
+            <option disabled value="">請選擇</option>
+            <option value="中式">中式</option>
+            <option value="西式">西式</option>
+          </select>
+        </div>
+        <div class="row">
           <label>店家簡介</label>
           <textarea v-model="vm.store.description" rows="3" />
         </div>
@@ -150,7 +158,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useStore } from 'vuex';
 import { useRouter } from 'vue-router';
 import useStoreSettingViewModel from '../viewmodels/storeSettingViewModel.js';
@@ -159,6 +167,17 @@ const store = useStore();
 const router = useRouter();
 const vm = useStoreSettingViewModel();
 const WEEKDAYS = ['星期一','星期二','星期三','星期四','星期五','星期六','星期日'];
+
+// 页面加载时设置 ownerId
+onMounted(() => {
+  const userId = store.getters['user/customer']?.id;
+  if (userId) {
+    vm.store.ownerId = userId;
+  } else {
+    alert('請先登入');
+    router.push('/login');
+  }
+});
 
 // Sidebar 和使用者相關狀態
 const sidebarOpen = ref(false);
@@ -226,8 +245,10 @@ function logout() {
 async function onSubmit() {
   const ok = await vm.submitForm();
   if (ok) {
-    // TODO: 送出成功後的 UI 流程（例如導頁或提示），待與後端串接完成後實作
-    alert('表單已送出（模擬）。請稍後串接後端 API。');
+    alert('店家建立成功！');
+    router.push('/store-management');
+  } else {
+    alert('建立失敗，請檢查表單錯誤');
   }
 }
 </script>
