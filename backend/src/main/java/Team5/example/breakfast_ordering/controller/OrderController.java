@@ -10,7 +10,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/orders") // 訂單的總機號碼
-@CrossOrigin(origins = "*")
+// @CrossOrigin(origins = "*")
 public class OrderController {
 
     @Autowired
