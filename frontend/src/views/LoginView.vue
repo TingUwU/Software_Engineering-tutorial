@@ -108,7 +108,7 @@ const handleLogin = async () => {
     alert('登入成功！')
     
     if (userData.role === 'owner') {
-      router.push('/store-setting')
+      router.push('/store-management')
     } else if (userData.role === 'buyer') {
       router.push('/home')
     } 

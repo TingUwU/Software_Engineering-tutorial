@@ -24,8 +24,11 @@ export default {
 
     const goHome = () => {
       const isLoggedIn = store.state.user.isLoggedIn || !!localStorage.getItem('user');
-      if (isLoggedIn) {
+      const user = JSON.parse(localStorage.getItem('user'));
+      if (isLoggedIn&&user.role==='buyer') {
         router.push('/home');
+      } else if (isLoggedIn&&user.role==='owner') {
+        router.push('/store-management');
       } else {
         router.push('/nologinhome');
       }
