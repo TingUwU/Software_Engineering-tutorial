@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:3000/api/stores'
+const API_URL = 'http://localhost:8088/api/stores'
 
 export default {
   namespaced: true,

@@ -69,7 +69,7 @@
                                  :key="shop.id"
                                  :to="{ name: 'ShopView', params: { id: shop.id } }"
                                  class="shop-card">
-                        <img :src="shop.menu[0]?.imgUrl || require('@/assets/logo.png')" class="shop-img" alt="店家圖片">
+                        <img :src="shop.menu?.[0]?.imgUrl || require('@/assets/logo.png')" class="shop-img" alt="店家圖片">
                         <p class="shop-name">{{ shop.name }}</p>
                     </router-link>
                 </div>
@@ -87,7 +87,7 @@
                                  :key="shop.id"
                                  :to="{ name: 'ShopView', params: { id: shop.id } }"
                                  class="shop-card">
-                        <img :src="shop.menu[0]?.imgUrl || require('@/assets/logo.png')" class="shop-img" alt="店家圖片">
+                        <img :src="shop.menu?.[0]?.imgUrl || require('@/assets/logo.png')" class="shop-img" alt="店家圖片">
                         <p class="shop-name">{{ shop.name }}</p>
                     </router-link>
                 </div>

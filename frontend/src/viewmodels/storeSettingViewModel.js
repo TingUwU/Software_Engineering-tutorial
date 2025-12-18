@@ -48,7 +48,7 @@ export default function useStoreSettingViewModel() {
 
     try {
       // 呼叫後端 API 建立店家
-      const res = await fetch('http://localhost:3000/api/stores', {
+      const res = await fetch('http://localhost:8088/api/stores', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
