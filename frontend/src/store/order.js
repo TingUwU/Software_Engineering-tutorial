@@ -1,5 +1,4 @@
-// src/store/order.js
-const API_URL = 'http://localhost:8088/api/orders' // 後端訂單 API
+const API_URL = 'http://localhost:3000/api/orders'
 
 export default {
   namespaced: true,

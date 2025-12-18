@@ -1,13 +1,18 @@
 package Team5.example.breakfast_ordering.model;
 
+import java.util.List;
+
+import org.bson.types.ObjectId;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
-import java.util.List;
-import org.bson.types.ObjectId;
+
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 
 @Document(collection = "store")
 public class Store {
     @Id
+    @JsonSerialize(using = ToStringSerializer.class)
     private ObjectId id;
     private String name;
     private String description;
@@ -85,6 +90,7 @@ public class Store {
 
     // MenuItem
     public static class MenuItem {
+        @JsonSerialize(using = ToStringSerializer.class)
         private ObjectId id;
         private String itemName;
         private Double price;
@@ -92,6 +98,7 @@ public class Store {
         private String imgUrl;
         private Boolean isAvailable;
         private String tag;
+        private List<CustomOption> customOptions;
 
         public ObjectId getId() { return id; }
         public void setId(ObjectId id) { this.id = id; }
@@ -107,5 +114,18 @@ public class Store {
         public void setIsAvailable(Boolean isAvailable) { this.isAvailable = isAvailable; }
         public String getTag() { return tag; }
         public void setTag(String tag) { this.tag = tag; }
+        public List<CustomOption> getCustomOptions() { return customOptions; }
+        public void setCustomOptions(List<CustomOption> customOptions) { this.customOptions = customOptions; }
+    }
+
+    // CustomOption for MenuItem
+    public static class CustomOption {
+        private String name;
+        private Double price;
+
+        public String getName() { return name; }
+        public void setName(String name) { this.name = name; }
+        public Double getPrice() { return price; }
+        public void setPrice(Double price) { this.price = price; }
     }
 }
