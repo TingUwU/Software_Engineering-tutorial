@@ -36,7 +36,6 @@ public class User {
 
     private String phone = "";    // 電話
 
-    @Indexed(unique = true) 
     private String email;         // 電子郵件
 
     private AuthProvider provider;  // 紀錄是使用哪種方式登入

@@ -8,12 +8,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import Team5.example.breakfast_ordering.repository.UserRepository;
 import Team5.example.breakfast_ordering.model.User;
 import Team5.example.breakfast_ordering.model.User.AuthProvider;
+
+import java.util.Map;
 import java.util.Optional;
 
 @Service
 public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
     // Google login API: http://localhost:8088/oauth2/authorization/google
+    // Facebook login API: http://localhost:8088/oauth2/authorization/facebook
 
     @Autowired
     private UserRepository userRepository;
@@ -29,43 +32,74 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
     }
 
     private OAuth2User processOAuth2User(String provider, OAuth2User oAuth2User) {
-        String email = oAuth2User.getAttribute("email");
+        String email = null;
+        String name = null;
+        String photo = null;
+        String providerId = null;
+
+        if("google".equals(provider)) {
+            email = oAuth2User.getAttribute("email");
+            name = oAuth2User.getAttribute("name");
+            providerId = oAuth2User.getAttribute("sub"); // Google 的 ID 叫 sub
+            photo = oAuth2User.getAttribute("picture");
+        }
+        else if("facebook".equals(provider)) {
+            email = oAuth2User.getAttribute("email");
+            name = oAuth2User.getAttribute("name");
+            providerId = oAuth2User.getAttribute("id"); // Facebook 的 ID 叫 id
+
+            if (oAuth2User.getAttributes().containsKey("picture")) {
+                Map<String, Object> pictureObj = (Map<String, Object>) oAuth2User.getAttribute("picture");
+                if (pictureObj.containsKey("data")) {
+                    Map<String, Object> dataObj = (Map<String, Object>) pictureObj.get("data");
+                    if (dataObj.containsKey("url")) {
+                        photo = (String) dataObj.get("url");
+                    }
+                }
+            }
+
+            if(photo == null) {   // 如果上面沒抓到再自己組
+                photo = "https://graph.facebook.com/" + providerId + "/picture?type=large";
+            }
+        }
+
+        if(email == null || email.isEmpty()) {
+            throw new RuntimeException("無法從第三方帳號取得 Email，請確認您的帳號設定。");
+        }
         
-        Optional<User> userOptional = userRepository.findByEmail(email);
+        AuthProvider authProviderEnum = AuthProvider.valueOf(provider.toUpperCase());
+        Optional<User> userOptional = userRepository.findByEmailAndProvider(email, authProviderEnum);
+
         User user;
 
-        if (userOptional.isPresent()) {
+        if(userOptional.isPresent()) {
             user = userOptional.get();
-            AuthProvider currentProvider = user.getProvider();
-            if (currentProvider == null) {
-                currentProvider = AuthProvider.LOCAL; // 舊資料預設視為一般帳號
-            }
-
-            if (!currentProvider.equals(AuthProvider.valueOf(provider.toUpperCase()))) {
-                throw new RuntimeException("帳號已存在，請使用原本的方式登入");
-            }
-            user = updateExistingUser(user, oAuth2User);
-        } else {
-            user = registerNewUser(provider, oAuth2User);
+            user = updateExistingUser(user, name, photo);
+        }
+        else{
+            user = registerNewUser(provider, email, name, photo, providerId);
         }
 
         return oAuth2User;
     }
 
-    private User registerNewUser(String provider, OAuth2User oAuth2User) {
+    private User registerNewUser(String provider, String email, String name, String photo, String providerId) {
         User user = new User();
         user.setProvider(AuthProvider.valueOf(provider.toUpperCase()));
-        user.setProviderId(oAuth2User.getAttribute("sub")); // Google 的 ID
-        user.setAccount(oAuth2User.getAttribute("email"));  // 用 Email 當帳號
-        user.setEmail(oAuth2User.getAttribute("email"));
-        user.setNickname(oAuth2User.getAttribute("name"));
-        user.setPhoto(oAuth2User.getAttribute("picture"));
+        user.setProviderId(providerId);
+        user.setAccount(email); // 用 Email 當帳號
+        user.setEmail(email);
+        user.setNickname(name);
+        user.setPhoto(photo);
+        
+        user.setRole("buyer");   // 預設為買家，待更改
+        
         return userRepository.save(user);
     }
 
-    private User updateExistingUser(User existingUser, OAuth2User oAuth2User) {
-        existingUser.setNickname(oAuth2User.getAttribute("name"));
-        existingUser.setPhoto(oAuth2User.getAttribute("picture"));
+    private User updateExistingUser(User existingUser, String name, String photo) {
+        existingUser.setNickname(name);
+        existingUser.setPhoto(photo);
         return userRepository.save(existingUser);
     }
 }
