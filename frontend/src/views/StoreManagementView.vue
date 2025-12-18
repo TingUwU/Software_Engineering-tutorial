@@ -156,7 +156,9 @@ export default {
                 id: '',
                 itemName: '',
                 price: 0,
+                description: '',
                 tag: '',
+                isAvailable: true,
                 imgUrl: ''
             },
             keyword: "",
@@ -164,10 +166,12 @@ export default {
                 photo: ""
             },
             newCategoryName: "",
-            // 餐點資料 (之後可以從 API 或 Vuex 取得)
+            // 餐點資料 (從 API 或 Vuex 取得)
             menuItems: [],
             // 分類資料
-            categories: []
+            categories: [],
+            storeId: null,
+            currentStore: null,
         };
     },
     computed: {
@@ -176,11 +180,49 @@ export default {
             return this.$store.getters['user/customer']
         }
     },
-    mounted() {
+    async mounted() {
         // 載入餐點資料
-        this.loadMenuItems();
+        await this.loadOwnerStore();
     },
     methods: {
+
+        async loadOwnerStore() {
+            try{
+                const userId=this.customer.id;
+                if(!userId){
+                    alert('請先登入');
+                    this.$router.push('/login');
+                    return;
+                }
+
+                const res =await fetch('http://localhost:3000/api/stores');
+                const stores =await res.json();
+
+                const myStore=stores.find(store => store.ownerId===userId);
+                
+                if(!myStore){
+                    console.log('找不到店家');
+                    this.menuItems=[];
+                    this.categories=[];
+                    return;
+                }
+
+                this.storeId=myStore.id;
+                this.currentStore=myStore;
+                this.menuItems=myStore.menu||[];
+
+                const tags=[...new Set(this.menuItems.map(item => item.tag))];
+                this.categories=tags.filter(tag => tag);//過濾空值
+
+                console.log('載入店家成功:', myStore.name);
+                console.log('菜單項目:', this.menuItems.length);
+                console.log('分類:', this.categories);
+            } catch(err){
+                console.error('載入店家失敗:', err);
+                alert('載入店家失敗: ' + err.message);
+            }
+        },
+
         getItemsByCategory(category) {
             const key = this.keyword.trim().toLowerCase();
             return this.menuItems.filter(item => 
@@ -190,16 +232,7 @@ export default {
         },
 
         async loadMenuItems() {
-            try {
-                // TODO: 從 API 或 Vuex 取得當前商家的菜單和分類
-                
-                
-                // 初始為空，讓商家自己新增
-                this.menuItems = [];
-                this.categories = [];
-            } catch (err) {
-                console.error('載入菜單失敗:', err);
-            }
+            await this.loadOwnerStore();
         },
 
         // 分類管理
@@ -251,8 +284,9 @@ export default {
                 return;
             }
             this.selectedProduct = {
-                id: '',
                 itemName: '',
+                description: '',
+                isAvailable: true,
                 price: 0,
                 tag: this.categories[0],
                 imgUrl: ''
@@ -269,34 +303,83 @@ export default {
             this.menuItemModalOpen = false;
         },
 
-        saveMenuItem(updatedItem) {
+        async saveMenuItem(updatedItem) {
             try {
+                if(!this.storeId){
+                    alert('找不到店家');
+                    return;
+                }
+                    let isNewItem=!updatedItem.id;
+
                 if (updatedItem.id) {
                     // 編輯現有餐點
                     const index = this.menuItems.findIndex(item => item.id === updatedItem.id);
                     if (index !== -1) {
                         this.menuItems.splice(index, 1, updatedItem);
-                        alert('餐點已更新！');
                     }
                 } else {
                     // 新增餐點
-                    updatedItem.id = 'item' + Date.now();
                     this.menuItems.push(updatedItem);
-                    alert('餐點已新增！');
                 }
-                // 之後可以改為呼叫 API 或 Vuex action
+                //發送到後端
+                const res=await fetch(`http://localhost:3000/api/stores/${this.storeId}/menu`,{
+                    method: 'PUT',
+                    headers:{
+                        'Content-Type': 'application/json',
+                        'Authorization':`Bearer ${this.customer.id}`
+                    },
+                    body: JSON.stringify(this.menuItems)
+                });
+                if(!res.ok){
+                    const errorText= await res.text();
+                    throw new Error(errorText||'儲存失敗');
+                }
+
+                const updatedStore= await res.json();
+
+                this.menuItems= updatedStore.menu||[];
+                this.currentStore= updatedStore;
+
+                alert(isNewItem?'餐點已新增！':'餐點已更新！');
+
             } catch (err) {
                 console.error('儲存失敗:', err);
                 alert('儲存失敗，請稍後再試');
             }
         },
 
-        deleteItem(itemId) {
-            const index = this.menuItems.findIndex(item => item.id === itemId);
-            if (index !== -1) {
-                this.menuItems.splice(index, 1);
-            }
-            // 之後可以改為呼叫 API 或 Vuex action
+        async deleteItem(itemId) {
+            try{
+                if(!this.storeId){
+                    alert('找不到店家');
+                    return;
+                }
+                const index = this.menuItems.findIndex(item => item.id === itemId);
+                if (index !== -1) {
+                    this.menuItems.splice(index, 1);
+                }//本地刪除
+
+                const res= await fetch(`http://localhost:3000/api/stores/${this.storeId}/menu`,{
+                    method: 'PUT',
+                    headers:{
+                        'Content-Type': 'application/json',
+                        'Authorization':`Bearer ${this.customer.id}`
+                    },
+                    body: JSON.stringify(this.menuItems)
+                });
+
+                if(!res.ok){
+                    throw new Error('刪除失敗');
+                }
+
+                const updateStore= await res.json();
+                this.menuItems= updateStore.menu||[];
+
+                alert('餐點已刪除！');
+            } catch(err){
+                console.error('刪除失敗:', err);
+                alert('刪除失敗: ' + err.message);
+            } 
         },
 
         toggleSidebar() {
@@ -653,6 +736,7 @@ export default {
         padding-bottom: 10px;
         transition: transform 0.3s;
         text-decoration: none;
+        cursor: pointer;
     }
 
     .menu-item-card:hover {
@@ -698,14 +782,9 @@ export default {
 
     .empty-message {
         text-align: center;
+        padding: 40px 20px;
         color: #999;
-        padding: 20px;
-        font-size: 14px;
-        width: 100%;
-        position: relative;
-        left: -18px;
-        bottom: 30%;
-        transform: translateY(-50%);
+        font-size: 16px;
     }
 
     /* Modal */
