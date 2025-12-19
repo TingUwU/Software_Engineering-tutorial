@@ -69,8 +69,15 @@ public class CartController {
             throw new RuntimeException("商品不存在在購物車中");
         }
 
+        // 如果購物車已空，直接刪除整個購物車記錄
         if(cart.getItems().isEmpty()){
-            cart.setStoreId(null);
+            cartRepository.delete(cart);
+            // 返回空的購物車物件（不存入資料庫）
+            Cart emptyCart = new Cart();
+            emptyCart.setUserId(userId);
+            emptyCart.setStoreId(null);
+            emptyCart.setTotalPrice(0);
+            return emptyCart;
         }
 
         cart.recalculateTotalPrice();
@@ -83,10 +90,8 @@ public class CartController {
         Cart cart = cartRepository.findByUserId(userId)
                     .orElseThrow(() -> new RuntimeException("購物車不存在"));
 
-        cart.getItems().clear();
-        cart.setStoreId(null);
-        cart.setTotalPrice(0);
-        cartRepository.save(cart);
+        // 直接刪除整個購物車記錄
+        cartRepository.delete(cart);
 
         return "使用者 ID 為：" + userId + "的購物車已清空";
     }
