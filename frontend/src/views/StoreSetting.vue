@@ -59,16 +59,6 @@
           <label>店家地址*</label>
           <input v-model="vm.store.address" type="text" required />
         </div>
-        <div class="row two">
-          <div>
-            <label>經度*</label>
-            <input v-model.number="vm.lng" type="number" step="0.000001" required />
-          </div>
-          <div>
-            <label>緯度*</label>
-            <input v-model.number="vm.lat" type="number" step="0.000001" required />
-          </div>
-        </div>
       </section>
 
       <section>
