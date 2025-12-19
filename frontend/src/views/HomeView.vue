@@ -238,11 +238,11 @@
                     const updates = { ...this.editCustomer };
                     delete updates.id;
 
-                    console.log('Sending updates:', userId, updates); // ✅
+                    console.log('Sending updates:', userId, updates);
 
                     const result = await this.$store.dispatch('user/updateUser', { userId, updates });
 
-                    console.log('Update result:', result); // ✅
+                    console.log('Update result:', result); 
                     alert('使用者資訊已更新！');
                     this.closeUserModal();
                 } catch (err) {

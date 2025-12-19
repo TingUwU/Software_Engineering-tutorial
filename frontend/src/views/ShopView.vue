@@ -165,6 +165,11 @@
         created() {
             // 組件創建時載入店家資料
             this.loadShop()
+            
+            const userId = this.customer.id;
+            if (userId) {
+                this.$store.dispatch('cart/setUserId', userId);
+            }
         },
         watch: {
             // 監聽路由變化，切換店家時重新載入資料
@@ -236,11 +241,11 @@
                     const updates = { ...this.editCustomer };
                     delete updates.id;
 
-                    console.log('Sending updates:', userId, updates); // ✅
+                    console.log('Sending updates:', userId, updates);
 
                     const result = await this.$store.dispatch('user/updateUser', { userId, updates });
 
-                    console.log('Update result:', result); // ✅
+                    console.log('Update result:', result);
                     alert('使用者資訊已更新！');
                     this.closeUserModal();
                 } catch (err) {
@@ -293,12 +298,25 @@
             closeMenuItem() {
                 this.menuItemModalOpen = false;
             },
-            handleAddToCart(cartItem) {
+            async handleAddToCart(cartItem) {
                 console.log('加入購物車:', cartItem);
-                // 設定店家 ID 到購物車
-                this.$store.dispatch('cart/setStoreId', this.shop.id);
-                // 加入商品到購物車
-                this.$store.dispatch('cart/addItem', cartItem);
+                
+                const userId = this.customer.id;
+                if (!userId) {
+                    alert('請先登入');
+                    return;
+                }
+                
+                try {
+                    await this.$store.dispatch('cart/addItem', {
+                        item: cartItem,
+                        storeId: this.shop.id
+                    });
+                    alert('已加入購物車');
+                } catch (err) {
+                    console.error('加入購物車失敗:', err);
+                    alert('加入購物車失敗: ' + err.message);
+                }
             },
             // 檢查商品是否已收藏
             isItemFavorited(itemId) {

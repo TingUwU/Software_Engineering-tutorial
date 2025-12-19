@@ -55,7 +55,7 @@ export default {
     }
   },
   actions: {
-    async register({ commit }, registerData) {
+    async register({ commit, dispatch }, registerData) {
       const res = await fetch(`${API_URL}/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -68,10 +68,15 @@ export default {
       const data = await res.json()
       commit('UPDATE_CUSTOMER', data)
       commit('LOGIN')
+      
+      if (data.id) {
+        dispatch('cart/setUserId', data.id, { root: true })
+      }
+      
       return data
     },
 
-    async login({ commit }, loginData) {
+    async login({ commit, dispatch }, loginData) {
       const res = await fetch(`${API_URL}/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -84,6 +89,11 @@ export default {
       const data = await res.json()
       commit('UPDATE_CUSTOMER', data)
       commit('LOGIN')
+      
+      if (data.id) {
+        dispatch('cart/setUserId', data.id, { root: true })
+      }
+      
       return data
     },
 

@@ -153,7 +153,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed,onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useStore } from 'vuex'
 
@@ -179,6 +179,18 @@ const cart = computed(() => ({
 
 const customer = computed(() => store.getters['user/customer'] || {})
 
+onMounted(async () => {
+  const userId = customer.value.id
+  if (userId) {
+    try {
+      await store.dispatch('cart/setUserId', userId)
+      await store.dispatch('cart/fetchCart')
+    } catch (err) {
+      console.error('加載購物車失敗:', err)
+    }
+  }
+})
+
 // Methods
 const toggleSidebar = () => (sidebarOpen.value = !sidebarOpen.value)
 const openUserModal = () => { editCustomer.value = { ...customer.value }; userModalOpen.value = true }
@@ -202,14 +214,43 @@ const logout = () => {
 
 const goBack = () => router.back()
 
-const deleteItem = (index) => store.dispatch('cart/removeItem', index)
-const increaseQuantity = (index) => store.dispatch('cart/updateItemQuantity', {
-  index,
-  quantity: (store.state.cart.items[index]?.quantity || 0) + 1
-})
-const decreaseQuantity = (index) => {
-  const qty = store.state.cart.items[index]?.quantity || 1
-  if (qty > 1) store.dispatch('cart/updateItemQuantity', { index, quantity: qty - 1 })
+const deleteItem = async (index) => {
+  const item = store.state.cart.items[index]
+  if (!item) return
+  
+  try {
+    await store.dispatch('cart/removeItem', item.menuItemId || item.itemId)
+  } catch (err) {
+    alert('刪除失敗: ' + err.message)
+  }
+}
+
+const increaseQuantity = async (index) => {
+  const item = store.state.cart.items[index]
+  if (!item) return
+  
+  try {
+    await store.dispatch('cart/updateItemQuantity', {
+      index,
+      quantity: item.quantity + 1
+    })
+  } catch (err) {
+    alert('更新數量失敗: ' + err.message)
+  }
+}
+
+const decreaseQuantity = async (index) => {
+  const item = store.state.cart.items[index]
+  if (!item || item.quantity <= 1) return
+  
+  try {
+    await store.dispatch('cart/updateItemQuantity', {
+      index,
+      quantity: item.quantity - 1
+    })
+  } catch (err) {
+    alert('更新數量失敗: ' + err.message)
+  }
 }
 
 
@@ -232,7 +273,6 @@ const updateUserInfo = async () => {
 const checkout = async () => {
   if (!cart.value.items.length) return alert('購物車是空的')
 
-  // 驗證必填欄位
   if (orderType.value === '內用' && (!tableNumber.value || tableNumber.value.trim() === '')) {
     return alert('請填寫桌號')
   } else if (orderType.value === '外帶' && (!takeoutTime.value || takeoutTime.value.trim() === '')) {
@@ -267,8 +307,7 @@ const checkout = async () => {
     // 使用 Vuex order store 建立訂單
     const createdOrder = await store.dispatch('order/createOrder', orderData)
 
-    // 清空購物車
-    store.dispatch('cart/clearCart')
+    await store.dispatch('cart/clearCart')
 
     // 跳轉到訂單頁面，帶參數 orderId
     router.push({ name: 'OrderView', query: { orderId: createdOrder.id } })

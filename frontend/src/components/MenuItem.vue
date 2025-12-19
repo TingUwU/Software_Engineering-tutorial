@@ -139,7 +139,6 @@ const addToCart = () => {
   }
 
   emit('add-to-cart', cartItem)
-  alert('已加入購物車')
   closeModal()
 }
 

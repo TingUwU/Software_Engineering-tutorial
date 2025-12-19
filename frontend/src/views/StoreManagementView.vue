@@ -224,12 +224,12 @@ export default {
                 const tags = [...new Set(this.menuItems.map(item => item.tag))];
                 this.categories = tags.filter(tag => tag); // 過濾空值
 
-                console.log('✅ 載入店家成功:', myStore.name);
+                console.log('載入店家成功:', myStore.name);
                 console.log('  - 店家ID:', this.storeId);
                 console.log('  - 菜單項目:', this.menuItems.length, '個');
                 console.log('  - 分類:', this.categories);
             } catch (err) {
-                console.error('❌ 載入店家失敗:', err);
+                console.error(' 載入店家失敗:', err);
                 alert('載入店家失敗: ' + err.message);
             }
         },
