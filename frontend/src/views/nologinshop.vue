@@ -19,7 +19,7 @@
       </div>
       <ul>
         <router-link to="/nologincart"><li>購物車</li></router-link>
-        <li @click="needLogin">訂單管理</li>
+        <router-link to="/nologinorder"><li>訂單管理</li></router-link>
       </ul>
       <!-- 登入按鈕 -->
       <div class="sidebar-login">
