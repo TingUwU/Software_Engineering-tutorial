@@ -22,7 +22,7 @@
     <!-- 左上角顧客頭像 -->
     <img v-if="customer" class="avatar" :src="customer.photo || require('@/assets/logo.png')" alt="user" @click="toggleSidebar">
 
-    <h1>StoreSetting</h1>
+    <h1>{{ vm.isEditMode ? '編輯店家資訊' : '新增店家' }}</h1>
 
     <form class="form" @submit.prevent="onSubmit">
       <section>
@@ -160,22 +160,37 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useStore } from 'vuex';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import useStoreSettingViewModel from '../viewmodels/storeSettingViewModel.js';
 
 const store = useStore();
 const router = useRouter();
+const route = useRoute();
 const vm = useStoreSettingViewModel();
 const WEEKDAYS = ['星期一','星期二','星期三','星期四','星期五','星期六','星期日'];
 
-// 页面加载时设置 ownerId
-onMounted(() => {
+// 页面加载时设置 ownerId 或加载店家数据
+onMounted(async () => {
   const userId = store.getters['user/customer']?.id;
-  if (userId) {
-    vm.store.ownerId = userId;
-  } else {
+  if (!userId) {
     alert('請先登入');
     router.push('/login');
+    return;
+  }
+  
+  vm.store.ownerId = userId;
+  
+  // 如果有 id 参数，表示为编辑模式
+  if (route.params.id) {
+    const success = await vm.loadStore(route.params.id);
+    if (!success) {
+      // 顯示具體的錯誤信息
+      const errorMessage = vm.validationErrors.length > 0 
+        ? vm.validationErrors.join('\n') 
+        : '無法載入店家資料';
+      alert(`載入失敗：\n\n${errorMessage}`);
+      router.push('/store-management');
+    }
   }
 });
 
@@ -245,10 +260,15 @@ function logout() {
 async function onSubmit() {
   const ok = await vm.submitForm();
   if (ok) {
-    alert('店家建立成功！');
+    alert(vm.isEditMode ? '店家資訊更新成功！' : '店家建立成功！');
     router.push('/store-management');
   } else {
-    alert('建立失敗，請檢查表單錯誤');
+    // 顯示具體的錯誤信息
+    const errorMessage = vm.validationErrors.length > 0 
+      ? vm.validationErrors.join('\n') 
+      : '操作失敗，請稍後再試';
+    const title = vm.isEditMode ? '更新失敗' : '建立失敗';
+    alert(`${title}：\n\n${errorMessage}`);
   }
 }
 </script>

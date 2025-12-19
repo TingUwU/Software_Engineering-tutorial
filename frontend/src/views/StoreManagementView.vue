@@ -12,7 +12,8 @@
             <ul>
                 <li @click="openUserModal">使用者資訊</li>
                 <router-link to="/order"><li>訂單管理</li></router-link>
-                <router-link to="/store-setting"><li>店家設定</li></router-link>
+                <li v-if="storeId" @click="goToEditStore">編輯店家資訊</li>
+                <router-link v-else to="/store-setting"><li>建立店家</li></router-link>
             </ul>
             <div class="sidebar-logout">
                 <button @click="logout">登出</button>
@@ -477,6 +478,12 @@ export default {
                     this.editCustomer.photo = e.target.result;
                 };
                 reader.readAsDataURL(file);
+            }
+        },
+
+        goToEditStore() {
+            if (this.storeId) {
+                this.$router.push(`/store-setting/${this.storeId}`);
             }
         },
 

@@ -54,6 +54,29 @@ public class StoreService {
         return token;
     }
 
+    // 更新店家基本資訊
+    public Store updateStore(String storeId, Store updatedStore, String userId) {
+        Store store = storeRepository.findById(storeId).orElse(null);
+        if (store == null) throw new IllegalArgumentException("STORE_NOT_FOUND");
+        if (userId == null || !userId.equals(store.getOwnerId())) throw new SecurityException("FORBIDDEN");
+        
+        // 更新基本資訊
+        if (updatedStore.getName() != null) store.setName(updatedStore.getName());
+        if (updatedStore.getCategory() != null) store.setCategory(updatedStore.getCategory());
+        if (updatedStore.getDescription() != null) store.setDescription(updatedStore.getDescription());
+        if (updatedStore.getPhone() != null) store.setPhone(updatedStore.getPhone());
+        if (updatedStore.getEmail() != null) store.setEmail(updatedStore.getEmail());
+        if (updatedStore.getAddress() != null) store.setAddress(updatedStore.getAddress());
+        if (updatedStore.getCoordinates() != null) store.setCoordinates(updatedStore.getCoordinates());
+        if (updatedStore.getBusinessHours() != null) store.setBusinessHours(updatedStore.getBusinessHours());
+        
+        // 更新狀態
+        store.setActive(updatedStore.isActive());
+        store.setUpdatedAt(Instant.now().toString());
+        
+        return storeRepository.save(store);
+    }
+
     // 更新店家菜單
     public Store updateMenu(String storeId, List<Store.MenuItem> menu, String userId) {
         Store store = storeRepository.findById(storeId).orElse(null);

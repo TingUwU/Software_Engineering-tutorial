@@ -27,6 +27,7 @@ const routes = [
     { path: '/nologinshop/:id', name: 'nologinshop', component: nologinshop, props: true },
     { path: '/order', name: 'OrderView', component: OrderView },
     { path: '/store-setting', name: 'StoreSetting', component: StoreSetting },
+    { path: '/store-setting/:id', name: 'StoreSettingEdit', component: StoreSetting, props: true },
     { path: '/store-management', name: 'StoreManagementView', component: StoreManagementView },
 ];
 
