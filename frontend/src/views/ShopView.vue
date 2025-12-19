@@ -1,5 +1,13 @@
 <template>
     <div class="shop">
+        <div
+  class="shop-hero"
+  :style="{
+    backgroundImage: `url(${shop.coverImage || require('@/assets/logo.png')})`
+  }"
+>
+  <div class="shop-hero-overlay"></div>
+</div>
         <!-- 遮罩層 -->
         <div v-show="sidebarOpen" class="overlay" @click="toggleSidebar"></div>
 
@@ -776,4 +784,23 @@
       .search-suggestions li:hover {
           background-color: #f2f6ff;
       }
+      .shop-hero {
+    position: relative;
+    width: 100%;
+    height: 180px;                 /* 高度可自行調整 */
+    background-image: url('@/assets/logo.png'); /* 預設圖 */
+    background-size: cover;
+    background-position: center;
+    border-radius: 0 0 16px 16px;
+    margin-bottom: 20px;
+}
+
+/* 半透明遮罩（關鍵） */
+.shop-hero-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.65); /* 白色半透明 */
+    backdrop-filter: blur(2px);            /* 可要可不要 */
+}
+
 </style>
