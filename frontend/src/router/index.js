@@ -9,6 +9,7 @@ import FavoriteView from '@/views/FavoriteView.vue';
 import nologinhome from '@/views/nologinhome.vue';
 import nologincart from '@/views/nologincart.vue';
 import nologinshop from '@/views/nologinshop.vue';
+import nologinorder from '@/views/nologinorder.vue';
 import OrderView from '@/views/OrderView.vue';
 import StoreSetting from'@/views/StoreSetting.vue';
 import StoreManagementView from'@/views/StoreManagementView.vue';
@@ -22,6 +23,7 @@ const routes = [
     { path: '/favorite', name: 'Favorite', component: FavoriteView },
     { path: '/nologinhome', name: 'nologinhome', component: nologinhome },
     { path: '/nologincart', name: 'nologincart', component: nologincart },
+    { path: '/nologinorder', name: 'nologinorder', component: nologinorder },
     { path: '/nologinshop/:id', name: 'nologinshop', component: nologinshop, props: true },
     { path: '/order', name: 'OrderView', component: OrderView },
     { path: '/store-setting', name: 'StoreSetting', component: StoreSetting },
