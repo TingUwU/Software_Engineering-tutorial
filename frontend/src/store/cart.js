@@ -23,10 +23,16 @@ export default {
         state.cartId = null
         return
       }
+      
+      console.log('SET_CART mutation - 收到的 cart:', cart)
+      console.log('SET_CART mutation - cart.storeId:', cart.storeId)
+      
       state.cartId = cart._id || cart.id
       state.userId = cart.userId
       state.storeId = cart.storeId || ''
       state.totalPrice = cart.totalPrice || 0
+      
+      console.log('SET_CART mutation - 設置後 state.storeId:', state.storeId)
       
       state.items = (cart.items || []).map(item => ({
         itemId: item.itemId,
@@ -52,6 +58,10 @@ export default {
 
     SET_USER_ID(state, userId) {
       state.userId = userId
+    },
+    
+    SET_STORE_ID(state, storeId) {
+      state.storeId = storeId
     }
   },
 
@@ -62,7 +72,7 @@ export default {
 
     async fetchCart({ commit, state }) {
       if (!state.userId) {
-        console.warn('⚠️ 未設定使用者ID，無法獲取購物車')
+        console.warn('未設定使用者ID，無法獲取購物車')
         return null
       }
 
@@ -74,11 +84,12 @@ export default {
         }
 
         const data = await res.json()
-        console.log(' 成功獲取購物車:', data)
+        console.log('成功獲取購物車:', data)
+        console.log('購物車 storeId:', data.storeId)
         commit('SET_CART', data)
         return data
       } catch (err) {
-        console.error(' 獲取購物車失敗:', err)
+        console.error('獲取購物車失敗:', err)
         throw err
       }
     },
@@ -114,6 +125,7 @@ export default {
         
         const data = await res.json()
         console.log('成功加入商品:', data)
+        console.log('加入後 storeId:', data.storeId)
         commit('SET_CART', data)
         return data
       } catch (err) {
@@ -160,12 +172,23 @@ export default {
       if (quantity <= 0) {
         return await dispatch('removeItem', item.itemId || item.menuItemId)
       }
+      
+      let storeId = state.storeId
+      
+      // 如果 storeId 是空的，說明數據異常
+      if (!storeId || storeId === '') {
+        console.error('檢測到購物車數據異常：有商品但 storeId 為空')
+        alert('購物車數據異常，建議清空購物車重新添加商品')
+        throw new Error('購物車數據異常，請清空購物車後重新添加')
+      }
+
+      console.log('更新商品數量 - 使用 storeId:', storeId)
 
       try {
         await dispatch('removeItem', item.itemId || item.menuItemId)
         await dispatch('addItem', {
           item: { ...item, quantity },
-          storeId: state.storeId
+          storeId: storeId
         })
         console.log('成功更新商品數量:', quantity)
       } catch (err) {
@@ -199,8 +222,10 @@ export default {
       }
     },
 
-    setStoreId({ state }, storeId) {
-      state.storeId = storeId
+    setStoreId({ commit, state }, storeId) {
+      if (state.storeId !== storeId) {
+        commit('SET_STORE_ID', storeId)
+      }
     }
   }
 }

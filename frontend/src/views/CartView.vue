@@ -235,7 +235,24 @@ const increaseQuantity = async (index) => {
       quantity: item.quantity + 1
     })
   } catch (err) {
-    alert('更新數量失敗: ' + err.message)
+    console.error('更新數量失敗:', err)
+    
+    // 如果是數據異常，提供清空購物車的選項
+    if (err.message && err.message.includes('數據異常')) {
+      const confirmed = confirm(
+        '購物車數據異常（店家資訊遺失）\n' +
+        '是否清空購物車並重新開始？\n\n' +
+        '點擊「確定」清空購物車\n' +
+        '點擊「取消」保留當前狀態'
+      )
+      
+      if (confirmed) {
+        await store.dispatch('cart/clearCart')
+        alert('購物車已清空，請重新添加商品')
+      }
+    } else {
+      alert('更新數量失敗: ' + err.message)
+    }
   }
 }
 
@@ -249,7 +266,24 @@ const decreaseQuantity = async (index) => {
       quantity: item.quantity - 1
     })
   } catch (err) {
-    alert('更新數量失敗: ' + err.message)
+    console.error('更新數量失敗:', err)
+    
+    // 如果是數據異常，提供清空購物車的選項
+    if (err.message && err.message.includes('數據異常')) {
+      const confirmed = confirm(
+        '購物車數據異常（店家資訊遺失）\n' +
+        '是否清空購物車並重新開始？\n\n' +
+        '點擊「確定」清空購物車\n' +
+        '點擊「取消」保留當前狀態'
+      )
+      
+      if (confirmed) {
+        await store.dispatch('cart/clearCart')
+        alert('購物車已清空，請重新添加商品')
+      }
+    } else {
+      alert('更新數量失敗: ' + err.message)
+    }
   }
 }
 
