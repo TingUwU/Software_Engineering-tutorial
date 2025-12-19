@@ -16,7 +16,35 @@
                 <button @click="logout">登出</button>
             </div>
     </div>
-
+<!-- 使用者資訊 Modal -->
+        <div v-if="userModalOpen" class="modal-overlay" @click.self="closeUserModal">
+            <div class="user-modal">
+                <h3>使用者資訊</h3>
+                <form @submit.prevent="updateUser">
+                    <div class="form-group">
+                        <label>頭像:</label>
+                        <img :src="editCustomer.photo || require('@/assets/logo.png')" class="preview-avatar" alt="user">
+                        <input type="file" @change="onAvatarChange" accept="image/*">
+                    </div>
+                    <div class="form-group">
+                        <label>名稱:</label>
+                        <input type="text" v-model="editCustomer.nickname">
+                    </div>
+                    <div class="form-group">
+                        <label>電話:</label>
+                        <input type="text" v-model="editCustomer.phone">
+                    </div>
+                    <div class="form-group">
+                        <label>電子郵件:</label>
+                        <input type="email" v-model="editCustomer.email">
+                    </div>
+                    <div class="modal-actions">
+                        <button type="submit" @click="updateUser">儲存</button>
+                        <button type="button" @click="closeUserModal">關閉</button>
+                    </div>
+                </form>
+            </div>
+        </div>
     <!-- 左上角顧客頭像 -->
     <img class="avatar" :src="customer.photo || require('@/assets/logo.png')" alt="user" @click="toggleSidebar">
 
@@ -71,7 +99,8 @@ export default {
     return {
       sidebarOpen: false,
       userModalOpen: false,
-      orders: []
+      orders: [],
+       editCustomer: {}
     }
   },
   computed: {
@@ -84,7 +113,7 @@ export default {
   },
   methods: {
     toggleSidebar() { this.sidebarOpen = !this.sidebarOpen },
-    openUserModal() { this.userModalOpen = true },
+
     closeUserModal() { this.userModalOpen = false },
 
     async fetchOrders() {
@@ -112,16 +141,46 @@ export default {
         alert('刪除失敗: ' + err.message)
       }
     },
+    openUserModal() {
+  this.editCustomer = { ...this.customer } // 深拷貝
+  this.userModalOpen = true
+},
+  async updateUser() {
+                try {
+                    const userId = this.editCustomer.id;
+                    const updates = { ...this.editCustomer };
+                    delete updates.id;
 
+                    console.log('Sending updates:', userId, updates); // ✅
+
+                    const result = await this.$store.dispatch('user/updateUser', { userId, updates });
+
+                    console.log('Update result:', result); // ✅
+                    alert('使用者資訊已更新！');
+                    this.closeUserModal();
+                } catch (err) {
+                    console.error(err);
+                    alert('更新失敗，請稍後再試: ' + err.message);
+                }
+            },
     logout() {
-      this.$store.dispatch('user/logout')
-      this.$router.push('/login')
-    }
+                this.$store.dispatch('user/logout'); // 呼叫 Vuex logout
+                localStorage.removeItem('token');    // 如果有 token
+                localStorage.removeItem('user');
+                this.$router.push('/login');         // 導向登入頁
+            },
+    onAvatarChange(e) {
+  const file = e.target.files[0]
+  if (!file) return
+
+  this.editCustomer.photo = URL.createObjectURL(file)
+}
+
   }
 }
 </script>
 <style scoped>
-.order {
+.order-page {
     font-family: "Microsoft JhengHei","PingFang TC","Noto Sans TC",sans-serif;
     position: relative;
     background: #f5f5f5;
@@ -237,5 +296,74 @@ export default {
 
             .sidebar-logout button:hover {
                 background-color: #0069D9;
+            }
+            /* Modal */
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0,0,0,0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 200;
+    }
+
+    .user-modal {
+        background-color: #fff;
+        padding: 20px 30px;
+        border-radius: 12px;
+        width: 300px;
+        max-width: 90%;
+        text-align: left;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    }
+
+        .user-modal h3 {
+            color: #0069D9;
+            margin-bottom: 15px;
+        }
+
+    .form-group {
+        margin-bottom: 10px;
+        display: flex;
+        flex-direction: column;
+    }
+
+        .form-group label {
+            margin-bottom: 4px;
+            font-weight: bold;
+        }
+
+        .form-group input {
+            padding: 6px 8px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+        }
+
+    .modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 15px;
+    }
+
+        .modal-actions button {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+            .modal-actions button:first-child {
+                background-color: #0069D9;
+                color: #fff;
+            }
+
+            .modal-actions button:last-child {
+                background-color: #ccc;
+                color: #333;
             }
 </style>
