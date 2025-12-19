@@ -51,7 +51,11 @@
     <!-- 訂單列表 -->
     <div class="order-management">
       <h2>訂單管理</h2>
-
+<!-- 沒有訂單 -->
+      <div v-if="!order" class="empty">
+        <p>目前沒有進行中的訂單</p>
+        <router-link to="/home" class="back-btn">回首頁點餐</router-link>
+      </div>
       <div class="order-cards">
         <div class="order-card" v-for="order in orders" :key="order.id">
           <div class="order-header">
@@ -366,4 +370,18 @@ export default {
                 background-color: #ccc;
                 color: #333;
             }
+            /* 空狀態 */
+.empty {
+  text-align: center;
+  margin-top: 80px;
+}
+.back-btn {
+  display: inline-block;
+  margin-top: 15px;
+  padding: 10px 18px;
+  background: #0069D9;
+  color: #fff;
+  border-radius: 8px;
+  text-decoration: none;
+}
 </style>
