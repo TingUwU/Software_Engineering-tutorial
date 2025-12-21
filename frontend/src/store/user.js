@@ -226,12 +226,12 @@ export default {
       return data
     },
 
-    async addCustomComboItem({ commit, state }, { comboId, storeId, itemId, customizations = [] }) {
+    async addCustomComboItem({ commit, state }, { comboId, storeId, itemId, customizations = [], quantity = 1 }) {
       const userId = state.customer.id
       const res = await fetch(`${API_URL}/${userId}/custom-combos/${comboId}/items/${storeId}/${itemId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ customizations })
+        body: JSON.stringify({ customizations, quantity })
       })
       if (!res.ok) {
         const err = await res.json()
