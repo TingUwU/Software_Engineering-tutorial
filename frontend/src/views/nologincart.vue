@@ -167,36 +167,66 @@ const decreaseQuantity = index => {
 const goLogin = () => {
   router.push('/login')
 }
-const checkout = () => {
+const checkout = async () => {
   if (!cart.value.items.length) return alert('購物車是空的')
   if (orderType.value === '內用' && !tableNumber.value) return alert('請輸入桌號')
- if (orderType.value === '外帶') {
-  if (!takeoutTime.value) return alert('請選擇取餐時間')
-  if (!phoneNumber.value) return alert('請輸入手機號碼')
-}
+  if (orderType.value === '外帶') {
+    if (!takeoutTime.value) return alert('請選擇取餐時間')
+    if (!phoneNumber.value) return alert('請輸入手機號碼')
+  }
   if (!paymentMethod.value) return alert('請選擇付款方式')
- 
+
+  // 轉換時間格式：將 "HH:MM" 轉換為當天該時間的 ISO 字符串
+  let takeoutDetailData = null;
+  if (orderType.value === '外帶') {
+    const today = new Date();
+    const [hours, minutes] = takeoutTime.value.split(':');
+    today.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+    takeoutDetailData = { takeoutTime: today.toISOString() };
+  }
+
   const orderData = {
-    storeId: store.state.cart.storeId,
+    storeId: store.state.cart.storeId || 'default-store-id',
     customerId: null,
+    customerPhone: phoneNumber.value || '',
     orderType: orderType.value,
     dineInDetail: orderType.value === '內用'
       ? { tableNumber: tableNumber.value }
       : null,
-    takeoutDetail: orderType.value === '外帶'
-      ? {
-          takeoutTime: takeoutTime.value,
-          phoneNumber: phoneNumber.value
-        }
-      : null,
-    items: cart.value.items,
+    takeoutDetail: takeoutDetailData,
+    items: cart.value.items.map(item => ({
+      menuItemId: item.menuItemId || item.itemId || '',
+      itemName: item.itemName,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice || 0,
+      customization: item.customization || [],
+      itemSubTotal: item.itemSubTotal
+    })),
     totalAmount: cart.value.totalAmount,
     remarks: remarks.value,
     paymentMethod: paymentMethod.value
   }
 
-  console.log('訪客訂單資料:', orderData)
-  alert('訪客訂單資料已準備完成（請看 console）')
+  try {
+    // 使用 Vuex order store 建立訂單
+    const createdOrder = await store.dispatch('order/createOrder', orderData)
+
+    // 檢查訂單是否成功建立
+    if (!createdOrder || !createdOrder.id) {
+      throw new Error('訂單建立失敗，伺服器未返回訂單資料')
+    }
+
+    // 清空購物車
+    await store.dispatch('cart/clearCart')
+
+    alert('訂單已成功送出！訂單編號：' + createdOrder.id)
+
+    // 跳轉到訪客訂單頁面
+    router.push('/nologinorder')
+  } catch (err) {
+    console.error('訂單建立失敗:', err)
+    alert('訂單建立失敗，請稍後再試: ' + err.message)
+  }
 }
 </script>
 

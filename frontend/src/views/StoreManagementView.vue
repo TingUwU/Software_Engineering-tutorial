@@ -11,9 +11,9 @@
             </div>
             <ul>
                 <li @click="openUserModal">使用者資訊</li>
-                <router-link to="/order"><li>訂單管理</li></router-link>
-                <li v-if="storeId" @click="goToEditStore">編輯店家資訊</li>
-                <router-link v-else to="/store-setting"><li>建立店家</li></router-link>
+                <router-link to="/store-management"><li>菜單設定</li></router-link>
+                <router-link to="/merchant-order"><li>訂單管理</li></router-link>
+                <router-link to="/store-setting"><li>編輯店家資訊</li></router-link>
             </ul>
             <div class="sidebar-logout">
                 <button @click="logout">登出</button>
@@ -218,6 +218,8 @@ export default {
 
                 this.storeId = myStore.id;
                 this.currentStore = myStore;
+                // 保存當前店家資訊到 localStorage，供其他頁面使用
+                localStorage.setItem('currentStore', JSON.stringify(myStore));
                 this.menuItems = myStore.menu || [];
 
                 // 從菜單項目的 tag 提取分類
@@ -847,23 +849,17 @@ export default {
         z-index: 200;
     }
 
-    .user-modal,
-    .category-modal {
+    .user-modal {
         background-color: #fff;
         padding: 20px 30px;
         border-radius: 12px;
-        width: 500px;
-        height: 200px;
+        width: 300px;
         max-width: 90%;
         text-align: left;
         box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
     }
 
-        .user-modal h2,
-        .category-modal h2 {
+        .user-modal h3 {
             color: #0069D9;
             margin-bottom: 15px;
         }
@@ -872,7 +868,6 @@ export default {
         margin-bottom: 10px;
         display: flex;
         flex-direction: column;
-        justify-content: center;
     }
 
         .form-group label {
@@ -884,7 +879,6 @@ export default {
             padding: 6px 8px;
             border-radius: 6px;
             border: 1px solid #ccc;
-
         }
 
     .modal-actions {

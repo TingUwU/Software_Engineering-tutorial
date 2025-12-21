@@ -317,13 +317,22 @@ const checkout = async () => {
     return alert('請選擇付款方式')
   }
 
+  // 轉換時間格式：將 "HH:MM" 轉換為當天該時間的 ISO 字符串
+  let takeoutDetailData = null;
+  if (orderType.value === '外帶') {
+    const today = new Date();
+    const [hours, minutes] = takeoutTime.value.split(':');
+    today.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+    takeoutDetailData = { takeoutTime: today.toISOString() };
+  }
+
   const orderData = {
     storeId: store.state.cart.storeId,
     customerId: customer.value.id || null,
     customerPhone: customerPhone.value || '',
     orderType: orderType.value,
     dineInDetail: orderType.value === '內用' ? { tableNumber: tableNumber.value } : null,
-    takeoutDetail: orderType.value === '外帶' ? { takeoutTime: takeoutTime.value } : null,
+    takeoutDetail: takeoutDetailData,
     items: cart.value.items.map(item => ({
       menuItemId: item.menuItemId,
       itemName: item.itemName,
@@ -341,12 +350,17 @@ const checkout = async () => {
     // 使用 Vuex order store 建立訂單
     const createdOrder = await store.dispatch('order/createOrder', orderData)
 
+    // 檢查訂單是否成功建立
+    if (!createdOrder || !createdOrder.id) {
+      throw new Error('訂單建立失敗，伺服器未返回訂單資料')
+    }
+
     await store.dispatch('cart/clearCart')
 
     // 跳轉到訂單頁面，帶參數 orderId
     router.push({ name: 'OrderView', query: { orderId: createdOrder.id } })
   } catch (err) {
-    console.error(err)
+    console.error('訂單建立錯誤:', err)
     alert('訂單建立失敗，請稍後再試: ' + err.message)
   }
 }
@@ -427,7 +441,16 @@ const checkout = async () => {
 .sidebar li { color:#fff; cursor:pointer; padding:10px 0; border-radius:4px; text-align: left;}
 .sidebar li:hover { background:#001633; }
 .sidebar-logout { margin-top:auto; }
-.sidebar-logout button { width:100%; padding:10px 0; background:#fff; color:black; border:none; border-radius:6px; cursor:pointer; }
+.sidebar-logout button {
+    width: 100%;
+    padding: 10px 0;
+    background-color: #fff;
+    color: black;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
+}
 .sidebar-logout button:hover { background:#0069D9; color:#fff; }
 .avatar { position: fixed; top:20px; left:20px; width:50px; height:50px; border-radius:50%; cursor:pointer; z-index:101; }
 .preview-avatar { width:80px; height:80px; border-radius:50%; object-fit:cover; margin-bottom:8px; }

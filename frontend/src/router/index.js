@@ -13,6 +13,7 @@ import nologinorder from '@/views/nologinorder.vue';
 import OrderView from '@/views/OrderView.vue';
 import StoreSetting from'@/views/StoreSetting.vue';
 import StoreManagementView from'@/views/StoreManagementView.vue';
+import MerchantOrderView from'@/views/MerchantOrderView.vue';
 const routes = [
     { path: '/', redirect: '/login' },
     { path: '/login', component: LoginView },
@@ -29,6 +30,7 @@ const routes = [
     { path: '/store-setting', name: 'StoreSetting', component: StoreSetting },
     { path: '/store-setting/:id', name: 'StoreSettingEdit', component: StoreSetting, props: true },
     { path: '/store-management', name: 'StoreManagementView', component: StoreManagementView },
+    { path: '/merchant-order', name: 'MerchantOrderView', component: MerchantOrderView },
 ];
 
 const router = createRouter({
