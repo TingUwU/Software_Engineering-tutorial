@@ -10,6 +10,7 @@
                 <span class="username">{{ customer.nickname }}, 肚子餓了嗎</span>
             </div>
             <ul>
+                <router-link to="/home"><li>首頁</li></router-link>
                 <li @click="openUserModal">使用者資訊</li>
                 <router-link to="/cart"><li>購物車</li></router-link>
                 <router-link to="/order"><li>訂單管理</li></router-link>
@@ -209,10 +210,26 @@
             closeUserModal() {
                 this.userModalOpen = false;
             },
-            updateUser() {
-                this.$store.dispatch('user/updateCustomer', this.editCustomer);
-                this.closeUserModal();
-                alert('使用者資訊已更新！');
+            async updateUser() {
+                try {
+                    // 驗證電子郵件格式
+                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                    if (this.editCustomer.email && !emailRegex.test(this.editCustomer.email)) {
+                        alert('請輸入有效的電子郵件地址');
+                        return;
+                    }
+
+                    const userId = this.editCustomer.id;
+                    const updates = { ...this.editCustomer };
+                    delete updates.id;
+
+                    await this.$store.dispatch('user/updateUser', { userId, updates });
+                    this.closeUserModal();
+                    alert('使用者資訊已更新！');
+                } catch (err) {
+                    console.error(err);
+                    alert('更新失敗，請稍後再試: ' + err.message);
+                }
             },
             scrollLeft(type) {
                 const slider = type === 'stores' ? this.$refs.storesSlider : this.$refs.itemsSlider;

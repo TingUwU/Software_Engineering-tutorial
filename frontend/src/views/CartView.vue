@@ -10,6 +10,7 @@
         <span class="username">{{ customer.nickname || '訪客' }}, 肚子餓了嗎</span>
       </div>
       <ul>
+        <router-link to="/home"><li>首頁</li></router-link>
         <li @click="openUserModal">使用者資訊</li>
         <router-link to="/cart"><li>購物車</li></router-link>
         <router-link to="/order"><li>訂單管理</li></router-link>
@@ -292,6 +293,13 @@ const decreaseQuantity = async (index) => {
 
 const updateUserInfo = async () => {
   try {
+    // 驗證電子郵件格式
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (editCustomer.value.email && !emailRegex.test(editCustomer.value.email)) {
+      alert('請輸入有效的電子郵件地址')
+      return
+    }
+
     const userId = editCustomer.value.id
     const updates = { ...editCustomer.value }
     delete updates.id

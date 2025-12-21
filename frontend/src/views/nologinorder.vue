@@ -43,33 +43,38 @@
         <div class="order-card">
           <div class="order-header">
             <p><strong>訂單編號：</strong>{{ order.id }}</p>
-            <p><strong>日期：</strong>{{ order.date }}</p>
+            <p><strong>建立時間：</strong>{{ formatDate(order.createAt) }}</p>
             <p>
               <strong>狀態：</strong>
-              <span class="status-processing">處理中</span>
+              <span class="status-processing">{{ order.state || '處理中' }}</span>
             </p>
           </div>
 
           <div class="order-items">
             <h4>餐點明細</h4>
             <ul>
-              <li v-for="item in order.items" :key="item.id">
-                {{ item.name }} x {{ item.quantity }}
-                - {{ item.price * item.quantity }} 元
+              <li v-for="(item, idx) in order.items" :key="idx">
+                {{ item.itemName || item.name }} x {{ item.quantity }}
+                - {{ item.unitPrice || item.price }} 元
               </li>
             </ul>
           </div>
 
-          <p><strong>總金額：</strong>{{ order.total }} 元</p>
+          <p><strong>總金額：</strong>{{ order.totalAmount }} 元</p>
 
           <p>
             <strong>用餐方式：</strong>
-            {{ order.takeIn ? '內用' : '外帶' }}
-            <span v-if="order.takeIn"> - 桌號 {{ order.tableNumber }}</span>
-            <span v-else> - 取餐時間 {{ order.pickupTime }}</span>
+            {{ order.orderType }}
+            <span v-if="order.orderType === '內用' && order.dineInDetail">
+              - 桌號 {{ order.dineInDetail.tableNumber }}
+            </span>
+            <span v-if="order.orderType === '外帶' && order.takeoutDetail">
+              - 取餐時間 {{ formatTime(order.takeoutDetail.takeoutTime) }}
+            </span>
           </p>
 
-          <p><strong>支付方式：</strong>{{ order.payment }}</p>
+          <p v-if="order.remarks"><strong>備註：</strong>{{ order.remarks }}</p>
+          <p><strong>支付方式：</strong>{{ order.paymentMethod }}</p>
 
           <div class="order-actions">
             <button @click="clearOrder">清除訂單</button>
@@ -103,11 +108,43 @@ export default {
       this.sidebarOpen = false
       this.$router.push('/login')
     },
-    clearOrder() {
-      if (!confirm('確定要清除這筆訂單嗎？')) return
-      localStorage.removeItem('guestOrder')
-      this.order = null
-      alert('訂單已清除')
+    async clearOrder() {
+      if (!confirm('確定要取消這筆訂單嗎？\n\n取消後商家將會收到通知，訂單將被標記為「已取消」。')) return
+
+      try {
+        // 調用後端API取消訂單
+        await this.$store.dispatch('order/updateOrder', {
+          orderId: this.order.id,
+          updates: { state: '已取消' }
+        })
+
+        // 清空本地存儲
+        localStorage.removeItem('guestOrder')
+        this.order = null
+        alert('訂單已取消，商家將會收到通知')
+      } catch (err) {
+        console.error('取消訂單失敗:', err)
+        alert('取消訂單失敗，請稍後再試: ' + err.message)
+      }
+    },
+    formatDate(dateString) {
+      if (!dateString) return ''
+      const date = new Date(dateString)
+      return date.toLocaleString('zh-TW', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    },
+    formatTime(timeString) {
+      if (!timeString) return ''
+      const date = new Date(timeString)
+      return date.toLocaleTimeString('zh-TW', {
+        hour: '2-digit',
+        minute: '2-digit'
+      })
     }
   }
 }

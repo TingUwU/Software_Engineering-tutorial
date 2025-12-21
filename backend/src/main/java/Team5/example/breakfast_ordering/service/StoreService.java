@@ -59,7 +59,7 @@ public class StoreService {
         Store store = storeRepository.findById(storeId).orElse(null);
         if (store == null) throw new IllegalArgumentException("STORE_NOT_FOUND");
         if (userId == null || !userId.equals(store.getOwnerId())) throw new SecurityException("FORBIDDEN");
-        
+
         // 更新基本資訊
         if (updatedStore.getName() != null) store.setName(updatedStore.getName());
         if (updatedStore.getCategory() != null) store.setCategory(updatedStore.getCategory());
@@ -69,11 +69,16 @@ public class StoreService {
         if (updatedStore.getAddress() != null) store.setAddress(updatedStore.getAddress());
         if (updatedStore.getCoordinates() != null) store.setCoordinates(updatedStore.getCoordinates());
         if (updatedStore.getBusinessHours() != null) store.setBusinessHours(updatedStore.getBusinessHours());
-        
+
         // 更新狀態
         store.setActive(updatedStore.isActive());
+
+        // 保留原有菜單和分類（因為前端表單不編輯這些字段）
+        // store.setMenu(store.getMenu()); // 已經是原有的，不需要重新設置
+        // store.setCategories(store.getCategories()); // 已經是原有的，不需要重新設置
+
         store.setUpdatedAt(Instant.now().toString());
-        
+
         return storeRepository.save(store);
     }
 

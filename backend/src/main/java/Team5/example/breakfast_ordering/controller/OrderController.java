@@ -30,7 +30,7 @@ public class OrderController {
 
     // 【新增】API: 商家查詢訂單 (GET /api/orders/store/{storeId})
     @GetMapping("/store/{storeId}")
-    public List<Order> getStoreOrders(@PathVariable String storeId) {
+    public List<Map<String, Object>> getStoreOrders(@PathVariable String storeId) {
         return orderService.getOrdersByStore(storeId);
     }
 

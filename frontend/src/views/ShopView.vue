@@ -1,11 +1,25 @@
 <template>
     <div class="shop">
-        <div
-  class="shop-hero"
-  :style="{
-    backgroundImage: `url(${shop.coverImage || require('@/assets/logo.png')})`
-  }"
->
+        <!-- 加載狀態 -->
+        <div v-if="loading" class="loading-container">
+            <div class="loading-spinner"></div>
+            <p>載入中...</p>
+        </div>
+
+        <!-- 錯誤狀態 -->
+        <div v-else-if="!shop" class="error-container">
+            <p>找不到該店家</p>
+            <button @click="$router.push('/')">返回首頁</button>
+        </div>
+
+        <!-- 主要內容 -->
+        <div v-else>
+            <div
+                class="shop-hero"
+                :style="{
+                    backgroundImage: `url(${shop.coverImage || require('@/assets/logo.png')})`
+                }"
+            >
   <div class="shop-hero-overlay"></div>
 </div>
         <!-- 遮罩層 -->
@@ -110,7 +124,7 @@
                         <input type="email" v-model="editCustomer.email">
                     </div>
                     <div class="modal-actions">
-                        <button type="submit" @click="updateUserInfo">儲存</button>
+                        <button type="submit">儲存</button>
                         <button type="button" @click="closeUserModal">關閉</button>
                     </div>
                 </form>
@@ -135,6 +149,7 @@
             @add-to-cart="handleAddToCart"
             @toggle-favorite="toggleItemFavorite"
         />
+        </div>
     </div>
 </template>
 
@@ -158,14 +173,15 @@
                 },
                 editCustomer: { photo: "" },
                 shop: null, // 初始為 null，等待從 store 載入
+                loading: true, // 加載狀態
                 categoryRefs: {},
                 animateFavorites: {}, // 每個店家動畫狀態
             }
         },
-        created() {
+        async created() {
             // 組件創建時載入店家資料
-            this.loadShop()
-            
+            await this.loadShop()
+
             const userId = this.customer.id;
             if (userId) {
                 this.$store.dispatch('cart/setUserId', userId);
@@ -173,9 +189,9 @@
         },
         watch: {
             // 監聽路由變化，切換店家時重新載入資料
-            '$route.params.id': function(newId) {
+            '$route.params.id': async function(newId) {
                 if (newId) {
-                    this.loadShop()
+                    await this.loadShop()
                 }
             }
         },
@@ -220,23 +236,45 @@
                 this.openMenuItem(item); // 直接開啟 MenuItem Modal
             },
             // 根據路由參數載入店家資料
-            loadShop() {
+            async loadShop() {
+                this.loading = true; // 開始加載
                 const shopId = this.$route.params.id;
-                const shop = this.$store.getters['shops/getShopById'](shopId);
-                if (shop) {
+
+                try {
+                    // 首先嘗試從 store 中獲取
+                    let shop = this.$store.getters['shops/getShopById'](shopId);
+
+                    if (!shop) {
+                        // 如果 store 中沒有，嘗試從 API 獲取
+                        console.log('Store 中找不到店家，嘗試從 API 獲取:', shopId);
+                        shop = await this.$store.dispatch('shops/fetchShopById', shopId);
+
+                        // 同時獲取所有店家列表，確保其他頁面能正常工作
+                        await this.$store.dispatch('shops/fetchAllShops');
+                    }
+
                     this.shop = shop;
-                } else {
-                    // 如果找不到店家，顯示錯誤或導航回首頁
-                    alert('找不到該店家');
-                    this.$router.push('/');
+                    console.log('成功載入店家:', shop.name);
+                } catch (error) {
+                    console.error('獲取店家失敗:', error);
+                    this.shop = null; // 確保 shop 為 null，觸發錯誤顯示
+                } finally {
+                    this.loading = false; // 結束加載
                 }
             },
 
             toggleSidebar() { this.sidebarOpen = !this.sidebarOpen; },
             openUserModal() { this.editCustomer = { ...this.customer }; this.userModalOpen = true; },
             closeUserModal() { this.userModalOpen = false; },
-            async updateUserInfo() {
+            async updateUser() {
                 try {
+                    // 驗證電子郵件格式
+                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                    if (this.editCustomer.email && !emailRegex.test(this.editCustomer.email)) {
+                        alert('請輸入有效的電子郵件地址');
+                        return;
+                    }
+
                     const userId = this.editCustomer.id;
                     const updates = { ...this.editCustomer };
                     delete updates.id;
@@ -291,7 +329,9 @@
                 this.selectedProduct = {
                     id: dish.id,
                     itemName: dish.itemName,
-                    price: dish.price
+                    price: dish.price,
+                    description: dish.description,
+                    customOptions: dish.customOptions || []
                 };
                 this.menuItemModalOpen = true;
             },
@@ -879,6 +919,53 @@
     inset: 0;
     background: rgba(255, 255, 255, 0.65); /* 白色半透明 */
     backdrop-filter: blur(2px);            /* 可要可不要 */
+}
+
+/* 加載和錯誤狀態 */
+.loading-container, .error-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    padding: 40px;
+    text-align: center;
+}
+
+.loading-spinner {
+    width: 50px;
+    height: 50px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #0069D9;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 20px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.loading-container p, .error-container p {
+    font-size: 18px;
+    color: #666;
+    margin-bottom: 20px;
+}
+
+.error-container button {
+    padding: 10px 20px;
+    background-color: #0069D9;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s;
+}
+
+.error-container button:hover {
+    background-color: #0056b3;
 }
 
 </style>

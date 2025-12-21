@@ -74,6 +74,7 @@
             <option value="準備中">準備中</option>
             <option value="已完成">已完成</option>
             <option value="顧客已取餐">顧客已取餐</option>
+            <option value="已取消">已取消</option>
           </select>
           <button @click.prevent.stop="handleRefreshOrders" class="refresh-btn">刷新訂單</button>
         </div>
@@ -97,6 +98,9 @@
               <p><strong>建立時間：</strong>{{ formatDate(order.createAt) }}</p>
               <p v-if="order.customerId">
                 <strong>顧客ID：</strong>{{ order.customerId }}
+              </p>
+              <p v-if="order.customerId">
+                <strong>顧客名稱：</strong>{{ order.customerNickname }}
               </p>
               <p v-else>
                 <strong>訪客訂單</strong>
@@ -147,37 +151,42 @@
 
           <!-- 訂單操作 -->
           <div class="order-actions">
-            <button
-              v-if="order.state === '已送出'"
-              @click="updateOrderState(order.id, '已接單')"
-              class="btn-accept"
-            >
-              接受訂單
-            </button>
-            <button
-              v-if="order.state === '已接單'"
-              @click="updateOrderState(order.id, '準備中')"
-              class="btn-preparing"
-            >
-              開始準備
-            </button>
-            <button
-              v-if="order.state === '準備中'"
-              @click="updateOrderState(order.id, '已完成')"
-              class="btn-complete"
-            >
-              製作完成
-            </button>
-            <button
-              v-if="order.state === '已完成'"
-              @click="updateOrderState(order.id, '顧客已取餐')"
-              class="btn-picked"
-            >
-              顧客已取餐
-            </button>
-            <span v-if="order.state === '顧客已取餐'" class="completed-label">
-              ✓ 訂單已完成
+            <span v-if="order.state === '已取消'" class="cancelled-label">
+              ✗ 訂單已取消
             </span>
+            <template v-else>
+              <button
+                v-if="order.state === '已送出'"
+                @click="updateOrderState(order.id, '已接單')"
+                class="btn-accept"
+              >
+                接受訂單
+              </button>
+              <button
+                v-if="order.state === '已接單'"
+                @click="updateOrderState(order.id, '準備中')"
+                class="btn-preparing"
+              >
+                開始準備
+              </button>
+              <button
+                v-if="order.state === '準備中'"
+                @click="updateOrderState(order.id, '已完成')"
+                class="btn-complete"
+              >
+                製作完成
+              </button>
+              <button
+                v-if="order.state === '已完成'"
+                @click="updateOrderState(order.id, '顧客已取餐')"
+                class="btn-picked"
+              >
+                顧客已取餐
+              </button>
+              <span v-if="order.state === '顧客已取餐'" class="completed-label">
+                ✓ 訂單已完成
+              </span>
+            </template>
           </div>
         </div>
       </div>
@@ -279,9 +288,7 @@ const handleRefreshOrders = async (event) => {
   }
 }
 
-const applyFilter = () => {
-  // 篩選邏輯已在 computed 中處理
-}
+
 
 const updateOrderState = async (orderId, newState) => {
   try {
@@ -321,7 +328,8 @@ const getStatusClass = (state) => {
     '已接單': 'status-accepted',
     '準備中': 'status-preparing',
     '已完成': 'status-complete',
-    '顧客已取餐': 'status-picked'
+    '顧客已取餐': 'status-picked',
+    '已取消': 'status-cancelled'
   }
   return statusMap[state] || ''
 }
@@ -341,6 +349,13 @@ const closeUserModal = () => {
 
 const updateUserInfo = async () => {
   try {
+    // 驗證電子郵件格式
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (editCustomer.value.email && !emailRegex.test(editCustomer.value.email)) {
+      alert('請輸入有效的電子郵件地址')
+      return
+    }
+
     const userId = editCustomer.value.id
     const updates = { ...editCustomer.value }
     delete updates.id
@@ -433,25 +448,24 @@ const logout = () => {
   background-color: #001633;
 }
 .sidebar-logout {
-  margin-top: auto;
-  width: 100%;
-  padding: 0;
+    margin-top: auto; /* 推到底部 */
+    width: 100%;
 }
-.sidebar-logout button {
-  width: 100%;
-  padding: 12px 0;
-  font-size: 16px;
-  background: #d9534f;
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: bold;
-  transition: all 0.3s;
-}
-.sidebar-logout button:hover {
-  background: #c9302c;
-}
+
+    .sidebar-logout button {
+        width: 100%;
+        padding: 10px 0;
+        background-color: #fff;
+        color: black;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 16px;
+    }
+
+        .sidebar-logout button:hover {
+            background-color: #0069D9;
+        }
 
 /* Avatar */
 .avatar {
@@ -554,6 +568,7 @@ const logout = () => {
 .order-info p {
   margin: 5px 0;
   color: #333;
+  text-align: left;
 }
 
 .order-status {
@@ -591,6 +606,11 @@ const logout = () => {
 .status-picked {
   background: #d4edda;
   color: #155724;
+}
+
+.status-cancelled {
+  background: #f8d7da;
+  color: #721c24;
 }
 
 /* Order Body */
@@ -722,6 +742,12 @@ const logout = () => {
 
 .completed-label {
   color: #28a745;
+  font-weight: bold;
+  font-size: 16px;
+}
+
+.cancelled-label {
+  color: #dc3545;
   font-weight: bold;
   font-size: 16px;
 }

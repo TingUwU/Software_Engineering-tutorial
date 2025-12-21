@@ -58,9 +58,9 @@
                   </option>
                 </select>
               </div>
-              <!-- 自訂組合選項 -->
+              <!-- 客製化選項 -->
              <div class="form-group">
-                <label>自訂組合選項</label>
+                <label>客製化選項</label>
                 <div class="customization-list">
                   <div 
                     v-for="(option, index) in editItem.customOptions" 
@@ -88,7 +88,7 @@
                   </div>
                 </div>
                 <button class="btn-add-option" @click="addCustomOption">
-                  + 新增自訂選項
+                  + 新增客製化
                 </button>
               </div>
               

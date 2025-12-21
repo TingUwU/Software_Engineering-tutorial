@@ -10,6 +10,7 @@
                 <span class="username">{{ customer.nickname }}, 肚子餓了嗎</span>
             </div>
             <ul>
+                <router-link to="/home"><li>首頁</li></router-link>
                 <li @click="openUserModal">使用者資訊</li>
                 <router-link to="/cart"><li>購物車</li></router-link>
                 <router-link to="/order"><li>訂單管理</li></router-link>
@@ -119,7 +120,7 @@
                         <input type="email" v-model="editCustomer.email">
                     </div>
                     <div class="modal-actions">
-                        <button type="submit" @click="updateUserInfo">儲存</button>
+                        <button type="submit">儲存</button>
                         <button type="button" @click="closeUserModal">關閉</button>
                     </div>
                 </form>
@@ -232,8 +233,15 @@
             closeUserModal() {
                 this.userModalOpen = false;
             },
-            async updateUserInfo() {
+            async updateUser() {
                 try {
+                    // 驗證電子郵件格式
+                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                    if (this.editCustomer.email && !emailRegex.test(this.editCustomer.email)) {
+                        alert('請輸入有效的電子郵件地址');
+                        return;
+                    }
+
                     const userId = this.editCustomer.id;
                     const updates = { ...this.editCustomer };
                     delete updates.id;

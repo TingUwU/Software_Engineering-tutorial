@@ -107,22 +107,42 @@ export default function useStoreSettingViewModel() {
     store.updatedAt = new Date();
 
     try {
-      const url = isEditMode.value 
+      const url = isEditMode.value
         ? `http://localhost:8088/api/stores/${storeId.value}`
         : 'http://localhost:8088/api/stores';
-      
+
       const method = isEditMode.value ? 'PUT' : 'POST';
-      
+
+      // 準備要發送的數據，只包含應該更新的字段
+      const dataToSend = {
+        name: store.name,
+        description: store.description,
+        phone: store.phone,
+        email: store.email,
+        address: store.address,
+        category: store.category,
+        coordinates: store.coordinates,
+        businessHours: store.businessHours,
+        isActive: store.isActive,
+        updatedAt: store.updatedAt.toISOString(),
+      };
+
+      // 如果是編輯模式，不要發送 ownerId（因為它已經在路徑中驗證）
+      // 如果是創建模式，才發送 ownerId
+      if (!isEditMode.value) {
+        dataToSend.ownerId = store.ownerId;
+      }
+
+      // 獲取當前用戶ID用於認證
+      const currentUserId = store.ownerId; // 這個值在 StoreSetting.vue 的 onMounted 中設置
+
       const res = await fetch(url, {
         method: method,
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${store.ownerId}`
+          'Authorization': `Bearer ${currentUserId}`
         },
-        body: JSON.stringify({
-          ...store,
-          updatedAt: store.updatedAt.toISOString(),
-        }),
+        body: JSON.stringify(dataToSend),
       });
 
       if (!res.ok) {

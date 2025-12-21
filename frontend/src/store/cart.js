@@ -7,7 +7,8 @@ export default {
     storeId: '',
     userId: null,
     totalPrice: 0,
-    cartId: null
+    cartId: null,
+    isGuest: false // 訪客模式標記
   }),
   getters: {
     totalAmount: (state) => state.totalPrice,
@@ -62,6 +63,13 @@ export default {
     
     SET_STORE_ID(state, storeId) {
       state.storeId = storeId
+    },
+
+    SET_GUEST_MODE(state, isGuest) {
+      state.isGuest = isGuest
+      if (isGuest) {
+        state.userId = null // 訪客模式清除用戶ID
+      }
     }
   },
 
@@ -95,6 +103,49 @@ export default {
     },
 
     async addItem({ commit, state }, { item, storeId }) {
+      // 訪客模式：使用前端狀態管理
+      if (state.isGuest) {
+
+        const itemMenuItemId = item.menuItemId || item.id || item._id
+        const existingItemIndex = state.items.findIndex(i =>
+          i.menuItemId === itemMenuItemId &&
+          JSON.stringify(i.customization) === JSON.stringify(item.customization)
+        )
+
+        if (existingItemIndex >= 0) {
+          // 商品已存在，增加數量
+          const existingItem = state.items[existingItemIndex]
+          const newQuantity = existingItem.quantity + (item.quantity || 1)
+          const updatedItem = {
+            ...existingItem,
+            quantity: newQuantity,
+            itemSubTotal: existingItem.unitPrice * newQuantity
+          }
+          state.items.splice(existingItemIndex, 1, updatedItem)
+        } else {
+          // 新增商品
+          const newItem = {
+            menuItemId: itemMenuItemId,
+            itemName: item.itemName,
+            unitPrice: item.unitPrice || item.price,
+            quantity: item.quantity || 1,
+            customization: item.customization || [],
+            itemSubTotal: (item.unitPrice || item.price) * (item.quantity || 1)
+          }
+          state.items.push(newItem)
+        }
+
+        // 更新總價和店家ID
+        state.totalPrice = state.items.reduce((sum, item) => sum + item.itemSubTotal, 0)
+        if (storeId) {
+          state.storeId = storeId
+        }
+
+        console.log('訪客模式：成功加入商品到前端購物車')
+        return { items: state.items, totalPrice: state.totalPrice, storeId: state.storeId }
+      }
+
+      // 會員模式：使用後端API
       if (!state.userId) {
         throw new Error('未設定使用者ID，無法加入商品')
       }
@@ -104,7 +155,7 @@ export default {
         itemName: item.itemName,
         price: item.unitPrice || item.price,
         quantity: item.quantity || 1,
-        description: Array.isArray(item.customization) 
+        description: Array.isArray(item.customization)
           ? item.customization.filter(s => s).join('、')
           : (item.customization || '')
       }
@@ -122,7 +173,7 @@ export default {
           const errorText = await res.text()
           throw new Error(errorText || '加入商品失敗')
         }
-        
+
         const data = await res.json()
         console.log('成功加入商品:', data)
         console.log('加入後 storeId:', data.storeId)
@@ -135,10 +186,27 @@ export default {
     },
 
     async removeItem({ commit, state }, itemId) {
+      // 訪客模式：前端狀態管理
+      if (state.isGuest) {
+        const itemIndex = state.items.findIndex(item =>
+          item.menuItemId === itemId || item.itemId === itemId || item._id === itemId
+        )
+
+        if (itemIndex >= 0) {
+          state.items.splice(itemIndex, 1)
+          state.totalPrice = state.items.reduce((sum, item) => sum + item.itemSubTotal, 0)
+          console.log('訪客模式：成功從前端購物車移除商品')
+          return { items: state.items, totalPrice: state.totalPrice }
+        } else {
+          throw new Error('商品不存在')
+        }
+      }
+
+      // 會員模式：使用後端API
       if (!state.userId) {
         throw new Error('未設定使用者ID，無法移除商品')
       }
-      
+
       try {
         const res = await fetch(`${API_URL}/${state.userId}/items/${itemId}`, {
           method: 'DELETE'
@@ -160,10 +228,31 @@ export default {
     },
 
     async updateItemQuantity({ state, dispatch }, { index, quantity }) {
+      // 訪客模式：前端狀態管理
+      if (state.isGuest) {
+        const item = state.items[index]
+        if (!item) {
+          throw new Error('商品不存在')
+        }
+
+        if (quantity <= 0) {
+          return await dispatch('removeItem', item.menuItemId || item.itemId)
+        }
+
+        // 更新數量和總價
+        item.quantity = quantity
+        item.itemSubTotal = item.unitPrice * quantity
+        state.totalPrice = state.items.reduce((sum, item) => sum + item.itemSubTotal, 0)
+
+        console.log('訪客模式：成功更新商品數量:', quantity)
+        return { items: state.items, totalPrice: state.totalPrice }
+      }
+
+      // 會員模式：使用後端API
       if (!state.userId) {
         throw new Error('未設定使用者ID，無法更新商品數量')
       }
-      
+
       const item = state.items[index]
       if (!item) {
         throw new Error('商品不存在')
@@ -172,9 +261,9 @@ export default {
       if (quantity <= 0) {
         return await dispatch('removeItem', item.itemId || item.menuItemId)
       }
-      
+
       let storeId = state.storeId
-      
+
       // 如果 storeId 是空的，說明數據異常
       if (!storeId || storeId === '') {
         console.error('檢測到購物車數據異常：有商品但 storeId 為空')
@@ -199,16 +288,24 @@ export default {
     },
 
     async clearCart({ commit, state }) {
+      // 訪客模式：直接清空前端狀態
+      if (state.isGuest) {
+        commit('CLEAR_CART')
+        console.log('訪客模式：成功清空前端購物車')
+        return true
+      }
+
+      // 會員模式：使用後端API
       if (!state.userId) {
         commit('CLEAR_CART')
         return
       }
-      
+
       try {
         const res = await fetch(`${API_URL}/${state.userId}`, {
           method: 'DELETE'
         })
-        
+
         if (!res.ok) {
           throw new Error('清空購物車失敗')
         }
@@ -226,6 +323,10 @@ export default {
       if (state.storeId !== storeId) {
         commit('SET_STORE_ID', storeId)
       }
+    },
+
+    setGuestMode({ commit }, isGuest) {
+      commit('SET_GUEST_MODE', isGuest)
     }
   }
 }

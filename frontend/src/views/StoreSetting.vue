@@ -139,7 +139,7 @@
                     <input type="email" v-model="editCustomer.email">
                 </div>
                 <div class="modal-actions">
-                    <button type="submit" @click="updateUserInfo">儲存</button>
+                    <button type="submit">儲存</button>
                     <button type="button" @click="closeUserModal">關閉</button>
                 </div>
             </form>
@@ -168,19 +168,40 @@ onMounted(async () => {
     router.push('/login');
     return;
   }
-  
+
   vm.store.ownerId = userId;
-  
-  // 如果有 id 参数，表示为编辑模式
+
+  // 如果有 id 参数，表示为编辑模式，直接載入指定店家
   if (route.params.id) {
     const success = await vm.loadStore(route.params.id);
     if (!success) {
       // 顯示具體的錯誤信息
-      const errorMessage = vm.validationErrors.length > 0 
-        ? vm.validationErrors.join('\n') 
+      const errorMessage = vm.validationErrors.length > 0
+        ? vm.validationErrors.join('\n')
         : '無法載入店家資料';
       alert(`載入失敗：\n\n${errorMessage}`);
       router.push('/store-management');
+    }
+  } else {
+    // 如果沒有 id 參數，嘗試載入用戶現有的店家（如果有的話）
+    try {
+      const res = await fetch('http://localhost:8088/api/stores');
+      if (res.ok) {
+        const stores = await res.json();
+        const myStore = stores.find(s => s.ownerId === userId);
+
+        if (myStore) {
+          // 用戶已經有店家，載入現有數據以便編輯
+          const success = await vm.loadStore(myStore.id);
+          if (!success) {
+            console.warn('無法載入現有店家資料，將以空白表單開始');
+          }
+        }
+        // 如果沒有找到店家，就保持空白表單（創建模式）
+      }
+    } catch (error) {
+      console.warn('檢查現有店家時發生錯誤:', error);
+      // 忽略錯誤，繼續以空白表單開始
     }
   }
 });
@@ -211,8 +232,15 @@ function closeUserModal() {
   userModalOpen.value = false;
 }
 
-async function updateUserInfo() {
+async function updateUser() {
   try {
+    // 驗證電子郵件格式
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (editCustomer.value.email && !emailRegex.test(editCustomer.value.email)) {
+      alert('請輸入有效的電子郵件地址');
+      return;
+    }
+
     const userId = editCustomer.value.id;
     const updates = { ...editCustomer.value };
     delete updates.id;

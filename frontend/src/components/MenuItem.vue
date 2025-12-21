@@ -14,6 +14,9 @@
           <div class="product-info"><!--資訊區-->
             <h2 class="product-name">{{ productItem.itemName }}</h2>
             <p class="product-price">餐點金額：${{ productItem.price }}</p>
+            <div v-if="productItem.description" class="product-description">
+              <p>{{ productItem.description }}</p>
+            </div>
           </div>
           <div class="action-buttons"><!--按鈕區-->
             <button class="btn-action" @click="addToCustom">加入自訂組合</button>
@@ -22,16 +25,12 @@
         </div>
 
         <div class="product-content">
-          <div class="customization">
+          <div class="customization" v-if="productItem.customOptions && productItem.customOptions.length > 0">
             <h3>客製化選項</h3>
             <div class="checkbox-group">
-              <label class="checkbox-item">
-                <input type="checkbox" v-model="customization.noPickles" />
-                <span>不要酸菜</span>
-              </label>
-              <label class="checkbox-item">
-                <input type="checkbox" v-model="customization.addEgg" />
-                <span>加蛋 (+$10)</span>
+              <label class="checkbox-item" v-for="(option, index) in productItem.customOptions" :key="index">
+                <input type="checkbox" :value="index" v-model="selectedCustomizations" />
+                <span>{{ option.name }}{{ option.price > 0 ? ` (+$${option.price})` : option.price < 0 ? ` (-$${Math.abs(option.price)})` : '' }}</span>
               </label>
             </div>
           </div>
@@ -70,7 +69,8 @@ const props = defineProps({
     default: () => ({
       id: '',
       itemName: 'null',
-      price: 50
+      price: 50,
+      customOptions: []
     })
   },
   isFavorited: {
@@ -86,27 +86,24 @@ const emit = defineEmits(['close', 'add-to-cart', 'toggle-favorite'])
 const productItem = computed(() => props.product)
 
 const quantity = ref(1)
-const customization = ref({
-  noPickles: false,
-  addEgg: false
-})
+const selectedCustomizations = ref([])
 
 // 當彈窗關閉時重置數據
 watch(() => props.show, (newVal) => {
   if (!newVal) {
     quantity.value = 1
-    customization.value = {
-      noPickles: false,
-      addEgg: false
-    }
+    selectedCustomizations.value = []
   }
 })
 
 const subtotal = computed(() => {
   let total = productItem.value.price * quantity.value
-  if (customization.value.addEgg) {
-    total += 10 * quantity.value
-  }
+  selectedCustomizations.value.forEach(optionIndex => {
+    const option = productItem.value.customOptions[optionIndex]
+    if (option && option.price) {
+      total += option.price * quantity.value
+    }
+  })
   return total
 })
 
@@ -125,20 +122,27 @@ const closeModal = () => {
 }
 
 const addToCart = () => {
-  const customizationText = []
-  if (customization.value.noPickles) customizationText.push('不要酸菜')
-  if (customization.value.addEgg) customizationText.push('加蛋')
+  const customizationText = selectedCustomizations.value.map(index => {
+    const option = productItem.value.customOptions[index]
+    return option.name + (option.price > 0 ? ` (+$${option.price})` : option.price < 0 ? ` (-$${Math.abs(option.price)})` : '')
+  })
+
+  const extraPrice = selectedCustomizations.value.reduce((total, index) => {
+    const option = productItem.value.customOptions[index]
+    return total + (option.price || 0)
+  }, 0)
 
   const cartItem = {
-    menuItemId: productItem.value.id,
+    menuItemId: productItem.value.id || productItem.value._id,
     itemName: productItem.value.itemName,
-    unitPrice: customization.value.addEgg ? productItem.value.price + 10 : productItem.value.price,
+    unitPrice: productItem.value.price + extraPrice,
     quantity: quantity.value,
     customization: customizationText,
-    itemSubTotal: (customization.value.addEgg ? productItem.value.price + 10 : productItem.value.price) * quantity.value
+    itemSubTotal: (productItem.value.price + extraPrice) * quantity.value
   }
 
   emit('add-to-cart', cartItem)
+  alert('已加入購物車')
   closeModal()
 }
 
@@ -255,6 +259,17 @@ const addToFavorite = () => {
   font-size: 18px;
   color: #0069D9;
   font-weight: 600;
+}
+
+.product-description {
+  margin-top: 10px;
+}
+
+.product-description p {
+  color: #666;
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0;
 }
 
 .action-buttons {

@@ -7,6 +7,7 @@
         <span class="username">{{ customer.nickname || '訪客' }},肚子餓了嗎</span>
       </div>
       <ul>
+                <router-link to="/home"><li>首頁</li></router-link>
                 <li @click="openUserModal">使用者資訊</li>
                 <router-link to="/cart"><li>購物車</li></router-link>
                 <router-link to="/order"><li>訂單管理</li></router-link>
@@ -173,6 +174,13 @@ export default {
 },
   async updateUser() {
                 try {
+                    // 驗證電子郵件格式
+                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                    if (this.editCustomer.email && !emailRegex.test(this.editCustomer.email)) {
+                        alert('請輸入有效的電子郵件地址');
+                        return;
+                    }
+
                     const userId = this.editCustomer.id;
                     const updates = { ...this.editCustomer };
                     delete updates.id;
@@ -499,5 +507,14 @@ export default {
   color: #fff;
   border-radius: 8px;
   text-decoration: none;
+}
+
+.preview-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+  margin-bottom: 8px;
 }
 </style>
