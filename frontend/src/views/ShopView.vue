@@ -32,10 +32,11 @@
                 <span class="username">{{ customer.nickname }}, 肚子餓了嗎</span>
             </div>
             <ul>
+                <router-link to="/home"><li>首頁</li></router-link>
                 <li @click="openUserModal">使用者資訊</li>
-                <router-link to="/store-management"><li>菜單設定</li></router-link>
-                <router-link to="/merchant-order"><li>訂單管理</li></router-link>
-                <router-link to="/store-setting"><li>編輯店家資訊</li></router-link>
+                <router-link to="/cart"><li>購物車</li></router-link>
+                <router-link to="/order"><li>訂單管理</li></router-link>
+                <router-link to="/favorite"><li>收藏</li></router-link>
             </ul>
             <div class="sidebar-logout">
                 <button @click="logout">登出</button>
@@ -331,7 +332,8 @@
                     itemName: dish.itemName,
                     price: dish.price,
                     description: dish.description,
-                    customOptions: dish.customOptions || []
+                    customOptions: dish.customOptions || [],
+                    storeId: this.shop.id // 添加店家ID
                 };
                 this.menuItemModalOpen = true;
             },

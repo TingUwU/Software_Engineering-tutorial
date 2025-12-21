@@ -32,7 +32,7 @@ public class OrderService {
         return orderRepository.findByCustomerId(customerId);
     }
 
-    // 【新增】查詢某家店的訂單
+
     public List<Map<String, Object>> getOrdersByStore(String storeId) {
         List<Order> orders = orderRepository.findByStoreIdOrderByCreateAtDesc(storeId);
         return orders.stream().map(order -> {
@@ -68,7 +68,7 @@ public class OrderService {
         }).collect(java.util.stream.Collectors.toList());
     }
 
-    // 【新增】更新訂單狀態 (例如：商家接單、取消訂單)
+
     public Order updateOrderState(String orderId, String newState) {
         // 1. 先把訂單找出來
         Order order = orderRepository.findById(orderId)

@@ -88,6 +88,102 @@
             </div>
         </section>
 
+        <!-- 自訂組合 -->
+        <section class="category-section">
+            <div class="combo-header">
+                <h2 class="category-title">自訂組合 ({{ customer.customCombos.length }})</h2>
+                <button class="add-combo-btn" @click="openAddComboModal">+ 新增組合</button>
+            </div>
+            <div v-if="customer.customCombos.length > 0" class="slider-container">
+                <button class="scroll-btn left" @click="scrollLeft('combos')">&#8249;</button>
+                <div ref="combosSlider" class="slider">
+                    <div v-for="combo in customer.customCombos"
+                         :key="combo.comboId"
+                         class="shop-card combo-card"
+                         @click="openComboModal(combo)">
+                        <div class="combo-preview">
+                            <div class="combo-name-preview">{{ combo.comboName }}</div>
+                            <div class="combo-info-preview">
+                                <span class="combo-count">{{ combo.items ? combo.items.length : 0 }} 項商品</span>
+                                <span class="combo-price">NT$ {{ getComboTotal(combo) }}</span>
+                            </div>
+                        </div>
+                        <div class="combo-actions-overlay">
+                            <button class="edit-btn" @click.stop="openEditComboModal(combo)">編輯</button>
+                            <button class="delete-btn" @click.stop="deleteCombo(combo.comboId)">刪除</button>
+                        </div>
+                    </div>
+                </div>
+                <button class="scroll-btn right" @click="scrollRight('combos')">&#8250;</button>
+            </div>
+            <div v-else class="empty-message">
+                <p>尚無自訂組合</p>
+                <button class="add-combo-btn empty-add-btn" @click="openAddComboModal">+ 建立第一個組合</button>
+            </div>
+        </section>
+
+        <!-- 組合詳情 Modal -->
+        <div v-if="comboModalOpen" class="modal-overlay" @click.self="closeComboModal">
+            <div class="combo-detail-modal">
+                <button class="btn-close" @click="closeComboModal">✕</button>
+                <h3>{{ selectedCombo?.comboName }}</h3>
+                <div v-if="selectedCombo?.items && selectedCombo.items.length > 0">
+                    <div class="combo-items-detail">
+                        <div v-for="(comboItem, index) in selectedCombo.items"
+                             :key="`${comboItem.itemId}-${index}`"
+                             class="combo-item-detail"
+                             :class="{ 'editing': editingItemIndex === index }">
+                            <div class="item-detail-info">
+                                <div v-if="editingItemIndex !== index">
+                                    <!-- 正常顯示模式 -->
+                                    <div class="item-header">
+                                        <span class="item-name">{{ getItemName(comboItem) }}</span>
+                                        <div class="item-actions">
+                                            <button class="edit-item-btn" @click="startEditItem(index)">編輯</button>
+                                            <button class="delete-item-btn" @click="deleteItemFromCombo(selectedCombo.comboId, index)">刪除</button>
+                                        </div>
+                                    </div>
+                                    <div v-if="comboItem.customizations && comboItem.customizations.length > 0" class="item-customizations">
+                                        <small v-for="custom in comboItem.customizations" :key="custom" class="custom-tag">{{ custom }}</small>
+                                    </div>
+                                    <div class="item-quantity-info">
+                                        <span>數量: {{ comboItem.quantity || 1 }}</span>
+                                    </div>
+                                </div>
+                                <div v-else>
+                                    <!-- 編輯模式 -->
+                                    <div class="item-edit-form">
+                                        <h4>{{ getItemName(comboItem) }}</h4>
+                                        <div class="edit-quantity">
+                                            <label>數量:</label>
+                                            <div class="quantity-control">
+                                                <button @click="editItemQuantity = Math.max(1, editItemQuantity - 1)">-</button>
+                                                <input type="number" v-model.number="editItemQuantity" min="1" />
+                                                <button @click="editItemQuantity++">+</button>
+                                            </div>
+                                        </div>
+                            
+                                        <div class="edit-actions">
+                                            <button class="save-btn" @click="saveItemEdit(selectedCombo.comboId, index)">儲存</button>
+                                            <button class="cancel-btn" @click="cancelItemEdit">取消</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <span class="item-price">NT$ {{ getItemTotalPrice(comboItem) }}</span>
+                        </div>
+                    </div>
+                    <div class="combo-total-detail">
+                        <span>總計：NT$ {{ getComboTotal(selectedCombo) }}</span>
+                        <button class="order-combo-btn" @click="orderCombo(selectedCombo)">訂購組合</button>
+                    </div>
+                </div>
+                <div v-else class="empty-combo-detail">
+                    <p>尚未添加商品</p>
+                </div>
+            </div>
+        </div>
+
 
         <!-- 使用者資訊 Modal -->
         <div v-if="userModalOpen" class="modal-overlay" @click.self="closeUserModal">
@@ -129,6 +225,42 @@
             @toggle-favorite="toggleItemFavorite"
         />
 
+        <!-- 新增組合 Modal -->
+        <div v-if="addComboModalOpen" class="modal-overlay" @click.self="closeAddComboModal">
+            <div class="combo-modal">
+                <h3>新增自訂組合</h3>
+                <form @submit.prevent="addCombo">
+                    <div class="form-group">
+                        <label>組合名稱:</label>
+                        <input type="text" v-model="newComboName" placeholder="請輸入組合名稱" required>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="submit">新增</button>
+                        <button type="button" @click="closeAddComboModal">取消</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- 編輯組合 Modal -->
+        <div v-if="editComboModalOpen" class="modal-overlay" @click.self="closeEditComboModal">
+            <div class="combo-modal">
+                <h3>編輯組合名稱</h3>
+                <form @submit.prevent="updateCombo">
+                    <div class="form-group">
+                        <label>組合名稱:</label>
+                        <input type="text" v-model="editComboName" placeholder="請輸入組合名稱" required>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="submit">更新</button>
+                        <button type="button" @click="closeEditComboModal">取消</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+
+
         <!-- 右下角購物車快捷 -->
         <router-link to="/cart" class="cart-btn">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="24" height="24">
@@ -164,7 +296,17 @@
                 keyword: "",
                 editCustomer: {
                     photo: ""
-                }
+                },
+                comboModalOpen: false,
+                addComboModalOpen: false,
+                editComboModalOpen: false,
+                addItemModalOpen: false,
+                selectedCombo: null,
+                newComboName: "",
+                editComboName: "",
+                editingItemIndex: -1,
+                editItemQuantity: 1,
+                editItemCustomizations: []
             };
         },
         computed: {
@@ -232,13 +374,17 @@
                 }
             },
             scrollLeft(type) {
-                const slider = type === 'stores' ? this.$refs.storesSlider : this.$refs.itemsSlider;
+                const slider = type === 'stores' ? this.$refs.storesSlider :
+                             type === 'items' ? this.$refs.itemsSlider :
+                             this.$refs.combosSlider;
                 if (slider) {
                     slider.scrollBy({ left: -200, behavior: 'smooth' });
                 }
             },
             scrollRight(type) {
-                const slider = type === 'stores' ? this.$refs.storesSlider : this.$refs.itemsSlider;
+                const slider = type === 'stores' ? this.$refs.storesSlider :
+                             type === 'items' ? this.$refs.itemsSlider :
+                             this.$refs.combosSlider;
                 if (slider) {
                     slider.scrollBy({ left: 200, behavior: 'smooth' });
                 }
@@ -251,12 +397,7 @@
             },
             openMenuItem(item) {
                 this.selectedProduct = {
-                    id: item.id,
-                    itemName: item.itemName,
-                    price: item.price,
-                    description: item.description,
-                    imgUrl: item.imgUrl,
-                    storeId: item.storeId // 保存店家ID用於收藏功能
+                    ...item
                 };
                 // 設定當前店家ID到購物車
                 this.$store.dispatch('cart/setStoreId', item.storeId);
@@ -299,6 +440,291 @@
                 localStorage.removeItem('token');    // 如果有 token
                 localStorage.removeItem('user');
                 this.$router.push('/login');         // 導向登入頁
+            },
+
+            // 組合詳情 Modal 方法
+            openComboModal(combo) {
+                this.selectedCombo = combo;
+                this.comboModalOpen = true;
+            },
+            closeComboModal() {
+                this.comboModalOpen = false;
+                this.selectedCombo = null;
+            },
+
+            // 獲取單個商品的總價格（基礎價格 + 客製化選項價格）× 數量
+            getItemTotalPrice(comboItem) {
+                const store = this.stores.find(s => s.id === comboItem.storeId);
+                if (store) {
+                    const menuItem = store.menu.find(m => m.id === comboItem.itemId);
+                    if (menuItem) {
+                        let unitPrice = menuItem.price;
+
+                        // 計算客製化選項的價格
+                        if (comboItem.customizations && comboItem.customizations.length > 0) {
+                            comboItem.customizations.forEach(customText => {
+                                const priceMatch = customText.match(/[+-]\$\d+/);
+                                if (priceMatch) {
+                                    const priceStr = priceMatch[0];
+                                    const priceValue = parseInt(priceStr.substring(2));
+                                    if (priceStr.startsWith('+')) {
+                                        unitPrice += priceValue;
+                                    } else if (priceStr.startsWith('-')) {
+                                        unitPrice -= priceValue;
+                                    }
+                                }
+                            });
+                        }
+
+                        const quantity = comboItem.quantity || 1;
+                        return unitPrice * quantity;
+                    }
+                }
+                return 0;
+            },
+
+            // 編輯商品相關方法
+            startEditItem(index) {
+                const comboItem = this.selectedCombo.items[index];
+                this.editingItemIndex = index;
+                this.editItemQuantity = comboItem.quantity || 1;
+                this.editItemCustomizations = [...(comboItem.customizations || [])];
+            },
+
+            cancelItemEdit() {
+                this.editingItemIndex = -1;
+                this.editItemQuantity = 1;
+                this.editItemCustomizations = [];
+            },
+
+            async saveItemEdit(comboId, itemIndex) {
+                try {
+                    const comboItem = this.selectedCombo.items[itemIndex];
+                    const originalCustomizations = [...comboItem.customizations];
+
+                    // 呼叫後端API更新組合中的商品信息
+                    await this.$store.dispatch('user/updateCustomComboItem', {
+                        comboId: comboId,
+                        storeId: comboItem.storeId,
+                        itemId: comboItem.itemId,
+                        updates: {
+                            originalCustomizations: originalCustomizations, // 用於識別具體的商品實例
+                            quantity: this.editItemQuantity,
+                            customizations: this.editItemCustomizations
+                        }
+                    });
+
+                    // 更新本地狀態以反映變化
+                    comboItem.quantity = this.editItemQuantity;
+                    comboItem.customizations = [...this.editItemCustomizations];
+
+                    alert('商品資訊已更新！');
+                    this.cancelItemEdit();
+                } catch (err) {
+                    console.error(err);
+                    alert('更新失敗：' + err.message);
+                }
+            },
+
+            async deleteItemFromCombo(comboId, itemIndex) {
+                if (!confirm('確定要從組合中移除這個商品嗎？')) {
+                    return;
+                }
+
+                try {
+                    const comboItem = this.selectedCombo.items[itemIndex];
+                    await this.$store.dispatch('user/deleteCustomComboItem', {
+                        comboId: comboId,
+                        storeId: comboItem.storeId,
+                        itemId: comboItem.itemId,
+                        customizations: comboItem.customizations
+                    });
+
+                    // 如果組合中沒有商品了，重置店家ID
+                    if (this.selectedCombo.items.length === 1) {
+                        // 重新獲取組合數據以反映最新的狀態
+                        await this.$store.dispatch('user/getCustomCombos');
+                    }
+
+                    alert('商品已從組合中移除！');
+                    this.closeComboModal();
+                } catch (err) {
+                    console.error(err);
+                    alert('移除失敗：' + err.message);
+                }
+            },
+
+            // 自訂組合相關方法
+            openAddComboModal() {
+                this.newComboName = "";
+                this.addComboModalOpen = true;
+            },
+
+            closeAddComboModal() {
+                this.addComboModalOpen = false;
+                this.newComboName = "";
+            },
+
+            async addCombo() {
+                if (!this.newComboName.trim()) {
+                    alert('請輸入組合名稱');
+                    return;
+                }
+                try {
+                    await this.$store.dispatch('user/addCustomCombo', this.newComboName.trim());
+                    this.closeAddComboModal();
+                    alert('組合新增成功！');
+                } catch (err) {
+                    console.error(err);
+                    alert('新增失敗：' + err.message);
+                }
+            },
+
+            openEditComboModal(combo) {
+                this.selectedCombo = combo;
+                this.editComboName = combo.comboName;
+                this.editComboModalOpen = true;
+            },
+
+            closeEditComboModal() {
+                this.editComboModalOpen = false;
+                this.selectedCombo = null;
+                this.editComboName = "";
+            },
+
+            async updateCombo() {
+                if (!this.editComboName.trim()) {
+                    alert('請輸入組合名稱');
+                    return;
+                }
+                try {
+                    await this.$store.dispatch('user/updateCustomCombo', {
+                        comboId: this.selectedCombo.comboId,
+                        comboName: this.editComboName.trim()
+                    });
+                    this.closeEditComboModal();
+                    alert('組合更新成功！');
+                } catch (err) {
+                    console.error(err);
+                    alert('更新失敗：' + err.message);
+                }
+            },
+
+            async deleteCombo(comboId) {
+                if (!confirm('確定要刪除這個組合嗎？')) {
+                    return;
+                }
+                try {
+                    await this.$store.dispatch('user/deleteCustomCombo', comboId);
+                    alert('組合刪除成功！');
+                } catch (err) {
+                    console.error(err);
+                    alert('刪除失敗：' + err.message);
+                }
+            },
+
+            openAddItemModal(combo) {
+                this.selectedCombo = combo;
+                this.addItemModalOpen = true;
+            },
+
+            closeAddItemModal() {
+                this.addItemModalOpen = false;
+                this.selectedCombo = null;
+            },
+
+            async addItemToCombo(item) {
+                try {
+                    await this.$store.dispatch('user/addCustomComboItem', {
+                        comboId: this.selectedCombo.comboId,
+                        storeId: item.storeId,
+                        itemId: item.id
+                    });
+                    alert('商品已加入組合！');
+                } catch (err) {
+                    console.error(err);
+                    alert('加入失敗：' + err.message);
+                }
+            },
+
+            async removeItemFromCombo(comboId, comboItem) {
+                try {
+                    await this.$store.dispatch('user/deleteCustomComboItem', {
+                        comboId: comboId,
+                        storeId: comboItem.storeId,
+                        itemId: comboItem.itemId
+                    });
+                    alert('商品已從組合移除！');
+                } catch (err) {
+                    console.error(err);
+                    alert('移除失敗：' + err.message);
+                }
+            },
+
+            getItemName(comboItem) {
+                const store = this.stores.find(s => s.id === comboItem.storeId);
+                if (store) {
+                    const menuItem = store.menu.find(m => m.id === comboItem.itemId);
+                    if (menuItem) {
+                        return menuItem.itemName;
+                    }
+                }
+                return '未知商品';
+            },
+
+            getComboTotal(combo) {
+                let total = 0;
+                combo.items.forEach(comboItem => {
+                    total += this.getItemTotalPrice(comboItem);
+                });
+                return total;
+            },
+
+            orderCombo(combo) {
+                // 設定店家ID到購物車
+                this.$store.dispatch('cart/setStoreId', combo.storeId);
+
+                
+                combo.items.forEach(comboItem => {
+                    const store = this.stores.find(s => s.id === comboItem.storeId);
+                    if (store) {
+                        const menuItem = store.menu.find(m => m.id === comboItem.itemId);
+                        if (menuItem) {
+                            let finalPrice = menuItem.price;
+
+                    
+                            if (comboItem.customizations && comboItem.customizations.length > 0) {
+                                comboItem.customizations.forEach(customText => {
+                
+                                    const priceMatch = customText.match(/[+-]\$\d+/);
+                                    if (priceMatch) {
+                                        const priceStr = priceMatch[0];
+                                        const price = parseInt(priceStr.substring(2)); 
+                                        if (priceStr.startsWith('+')) {
+                                            finalPrice += price;
+                                        } else if (priceStr.startsWith('-')) {
+                                            finalPrice -= price;
+                                        }
+                                    }
+                                });
+                            }
+
+                            const cartItem = {
+                                menuItemId: menuItem.id,
+                                itemName: menuItem.itemName,
+                                unitPrice: finalPrice, // 使用包含客製化選項的價格
+                                quantity: 1,
+                                customization: comboItem.customizations || [], // 使用儲存的客製化選項
+                                itemSubTotal: finalPrice // 使用包含客製化選項的價格
+                            };
+                            this.$store.dispatch('cart/addItem', { item: cartItem, storeId: combo.storeId });
+                        }
+                    }
+                });
+
+                // 跳轉到購物車頁面
+                this.$router.push('/cart');
+                alert('組合商品已加入購物車！');
             }
         }
     };
@@ -600,7 +1026,7 @@
 
     .item-price {
         margin-top: 4px;
-        font-size: 14px;
+        font-size: 16px;
         font-weight: bold;
         color: #0069D9;
     }
@@ -710,4 +1136,394 @@
             width: 28px;
             height: 28px;
         }
+
+    /* 自訂組合樣式 */
+    .combo-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+
+    .add-combo-btn {
+        background-color: #0069D9;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        padding: 8px 16px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: bold;
+    }
+
+    .add-combo-btn:hover {
+        background-color: #0056b3;
+    }
+
+    .empty-add-btn {
+        margin-top: 10px;
+    }
+
+    /* 組合卡片樣式 - 與其他卡片保持一致 */
+    .combo-card {
+        position: relative;
+        transition: transform 0.3s;
+    }
+
+    .combo-card:hover {
+        transform: scale(1.05);
+    }
+
+    .combo-preview {
+        padding: 15px;
+        text-align: center;
+    }
+
+    .combo-name-preview {
+        font-size: 18px;
+        font-weight: bold;
+        color: #0069D9;
+        margin-bottom: 10px;
+    }
+
+    .combo-info-preview {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 14px;
+    }
+
+    .combo-count {
+        color: #666;
+    }
+
+    .combo-price {
+        color: #0069D9;
+        font-weight: bold;
+    }
+
+    .combo-actions-overlay {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        display: flex;
+        gap: 5px;
+        opacity: 0;
+        transition: opacity 0.3s;
+    }
+
+    .combo-card:hover .combo-actions-overlay {
+        opacity: 1;
+    }
+
+    .edit-btn, .delete-btn {
+        padding: 4px 8px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: bold;
+    }
+
+    .edit-btn {
+        background-color: rgba(0, 105, 217, 0.9);
+        color: white;
+    }
+
+    .edit-btn:hover {
+        background-color: #0069D9;
+    }
+
+    .delete-btn {
+        background-color: rgba(220, 53, 69, 0.9);
+        color: white;
+    }
+
+    .delete-btn:hover {
+        background-color: #dc3545;
+    }
+
+    /* 組合詳情 Modal */
+    .combo-detail-modal {
+        background-color: white;
+        border-radius: 15px;
+        padding: 30px;
+        max-width: 600px;
+        width: 90%;
+        max-height: 80vh;
+        overflow-y: auto;
+        position: relative;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    }
+
+    .combo-detail-modal h3 {
+        color: #0069D9;
+        margin-bottom: 20px;
+        text-align: center;
+        font-size: 24px;
+    }
+
+    .combo-items-detail {
+        margin-bottom: 20px;
+    }
+
+    .combo-item-detail {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 0;
+        border-bottom: 1px solid #eee;
+    }
+
+    .combo-item-detail:last-child {
+        border-bottom: none;
+    }
+
+    .item-detail-info {
+        flex: 1;
+    }
+
+    .item-detail-info .item-name {
+        font-weight: bold;
+        display: block;
+        margin-bottom: 5px;
+    }
+
+    .item-customizations {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+
+    .custom-tag {
+        background-color: #e9ecef;
+        color: #495057;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-size: 11px;
+        border: 1px solid #dee2e6;
+    }
+
+    .item-price {
+        color: #0069D9;
+        font-weight: bold;
+    }
+
+    .combo-total-detail {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-top: 20px;
+        border-top: 2px solid #eee;
+        margin-top: 20px;
+    }
+
+    .combo-total-detail span {
+        font-size: 18px;
+        font-weight: bold;
+        color: #0069D9;
+    }
+
+    .order-combo-btn {
+        background-color: #0069D9;
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+        padding: 10px 20px;
+        cursor: pointer;
+        font-size: 16px;
+        font-weight: bold;
+    }
+
+
+
+    .empty-combo-detail {
+        text-align: center;
+        padding: 40px 20px;
+        color: #999;
+    }
+
+    .empty-combo-detail p {
+        margin-bottom: 15px;
+    }
+
+    .add-item-btn {
+        background-color: #17a2b8;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        padding: 8px 16px;
+        cursor: pointer;
+        font-size: 14px;
+    }
+
+    .add-item-btn:hover {
+        background-color: #138496;
+    }
+
+    /* 編輯模式樣式 */
+    .combo-item-detail.editing {
+        background-color: #f8f9fa;
+        border: 2px solid #0069D9;
+    }
+
+    .item-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 8px;
+    }
+
+    .item-actions {
+        display: flex;
+        gap: 8px;
+    }
+
+    .edit-item-btn, .delete-item-btn {
+        padding: 4px 8px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: bold;
+    }
+
+    .edit-item-btn {
+        background-color: #0069D9;
+        color: white;
+    }
+
+
+
+    .delete-item-btn {
+        background-color: #dc3545;
+        color: white;
+    }
+
+
+    .item-quantity-info {
+        margin-top: 8px;
+        font-size: 14px;
+        color: #666;
+    }
+
+    .item-edit-form {
+        width: 100%;
+    }
+
+    .item-edit-form h4 {
+        margin: 0 0 15px 0;
+        color: #0069D9;
+    }
+
+    .edit-quantity, .edit-customizations {
+        margin-bottom: 15px;
+    }
+
+    .edit-quantity label, .edit-customizations label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+        color: #333;
+    }
+
+    .quantity-control {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .quantity-control button {
+        width: 30px;
+        height: 30px;
+        border: none;
+        background-color: #0069D9;
+        color: white;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+        font-weight: bold;
+    }
+
+    .quantity-control button:hover {
+        background-color: #0056b3;
+    }
+
+    .quantity-control input {
+        width: 60px;
+        padding: 5px;
+        text-align: center;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+    }
+
+    .customization-options {
+        padding: 10px;
+        background-color: #f8f9fa;
+        border-radius: 6px;
+        border: 1px solid #dee2e6;
+    }
+
+    .note {
+        margin: 0;
+        color: #666;
+        font-style: italic;
+        font-size: 14px;
+    }
+
+    .edit-actions {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+        margin-top: 15px;
+    }
+
+    .save-btn, .cancel-btn {
+        padding: 8px 16px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: bold;
+    }
+
+    .save-btn {
+        background-color: #0069D9;
+        color: white;
+    }
+
+
+
+    .cancel-btn {
+        background-color: #ccc;
+        color: white;
+    }
+
+    /* 組合 Modal 樣式 - 與 user-modal 保持一致 */
+    .combo-modal {
+        background-color: #fff;
+        padding: 20px 30px;
+        border-radius: 12px;
+        width: 300px;
+        max-width: 90%;
+        text-align: left;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    }
+
+    .combo-modal.large-modal {
+        width: 600px;
+        max-height: 80vh;
+        overflow-y: auto;
+    }
+
+    .combo-modal h3 {
+        color: #0069D9;
+        margin-bottom: 15px;
+    }
+
+
 </style>
