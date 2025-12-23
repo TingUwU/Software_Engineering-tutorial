@@ -36,8 +36,11 @@ public class User {
 
     private String phone = "";    // 電話
 
-    @Indexed(unique = true) 
     private String email;         // 電子郵件
+
+    private AuthProvider provider;  // 紀錄是使用哪種方式登入
+
+    private String providerId;      // 記錄第三方登入給的唯一 ID
 
     // 儲存 Store 的 ID 字串
     private List<String> favorStores = new ArrayList<>();       // 收藏店家
@@ -50,6 +53,10 @@ public class User {
     private Date updatedAt;      // 更新時間
 
     ///////////////////////////////////////////
+    
+    public enum AuthProvider {
+        LOCAL, GOOGLE, FACEBOOK
+    }
 
     public static class FavorItem {
         private String storeId;
@@ -212,6 +219,22 @@ public class User {
     }
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public AuthProvider getProvider(){
+        return provider;
+    }
+
+    public void setProvider(AuthProvider provider){
+        this.provider = provider;
+    }
+
+    public String getProviderId(){
+        return providerId;
+    }
+
+    public void setProviderId(String providerId){
+        this.providerId = providerId;
     }
 
     public List<String> getFavorStores() {
