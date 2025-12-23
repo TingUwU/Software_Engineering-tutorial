@@ -1,5 +1,27 @@
 <template>
     <div class="shop">
+        <!-- 加載狀態 -->
+        <div v-if="loading" class="loading-container">
+            <div class="loading-spinner"></div>
+            <p>載入中...</p>
+        </div>
+
+        <!-- 錯誤狀態 -->
+        <div v-else-if="!shop" class="error-container">
+            <p>找不到該店家</p>
+            <button @click="$router.push('/')">返回首頁</button>
+        </div>
+
+        <!-- 主要內容 -->
+        <div v-else>
+            <div
+                class="shop-hero"
+                :style="{
+                    backgroundImage: `url(${shop.coverImage || require('@/assets/logo.png')})`
+                }"
+            >
+  <div class="shop-hero-overlay"></div>
+</div>
         <!-- 遮罩層 -->
         <div v-show="sidebarOpen" class="overlay" @click="toggleSidebar"></div>
 
@@ -10,6 +32,7 @@
                 <span class="username">{{ customer.nickname }}, 肚子餓了嗎</span>
             </div>
             <ul>
+                <router-link to="/home"><li>首頁</li></router-link>
                 <li @click="openUserModal">使用者資訊</li>
                 <router-link to="/cart"><li>購物車</li></router-link>
                 <router-link to="/order"><li>訂單管理</li></router-link>
@@ -36,7 +59,14 @@
 
         <!-- 店家資訊 -->
         <div class="shop-info">
-            <p>營業時間: {{ todayBusiness.start || '未營業' }} ~ {{ todayBusiness.close || '未營業' }}</p>
+            <div v-if="shop.description" class="shop-description">
+                <h4>店家簡介</h4>
+                <p class="description-text">{{ shop.description }}</p>
+            </div>
+            <div class="business-hours">
+                <h4>營業時間</h4>
+                <pre class="business-hours-text">{{ formattedBusinessHours }}</pre>
+            </div>
             <p>地址: {{ shop.address }}</p>
         </div>
 
@@ -102,7 +132,7 @@
                         <input type="email" v-model="editCustomer.email">
                     </div>
                     <div class="modal-actions">
-                        <button type="submit" @click="updateUserInfo">儲存</button>
+                        <button type="submit">儲存</button>
                         <button type="button" @click="closeUserModal">關閉</button>
                     </div>
                 </form>
@@ -127,6 +157,7 @@
             @add-to-cart="handleAddToCart"
             @toggle-favorite="toggleItemFavorite"
         />
+        </div>
     </div>
 </template>
 
@@ -150,19 +181,25 @@
                 },
                 editCustomer: { photo: "" },
                 shop: null, // 初始為 null，等待從 store 載入
+                loading: true, // 加載狀態
                 categoryRefs: {},
                 animateFavorites: {}, // 每個店家動畫狀態
             }
         },
-        created() {
+        async created() {
             // 組件創建時載入店家資料
-            this.loadShop()
+            await this.loadShop()
+
+            const userId = this.customer.id;
+            if (userId) {
+                this.$store.dispatch('cart/setUserId', userId);
+            }
         },
         watch: {
             // 監聽路由變化，切換店家時重新載入資料
-            '$route.params.id': function(newId) {
+            '$route.params.id': async function(newId) {
                 if (newId) {
-                    this.loadShop()
+                    await this.loadShop()
                 }
             }
         },
@@ -184,9 +221,48 @@
             // 取得今天營業時間
             todayBusiness() {
                 if (!this.shop) return {};//防止還沒加載出來就被訪問
-                const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+                const days = ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"];
                 const today = days[new Date().getDay()];
                 return this.shop.businessHours.find(h => h.day === today) || {};//找到今天營業時間來決定顯示是否營業中
+            },
+
+            // 格式化營業時間顯示
+            formattedBusinessHours() {
+                if (!this.shop || !this.shop.businessHours || this.shop.businessHours.length === 0) {
+                    return '暫無營業時間資訊';
+                }
+
+                // 將營業時間按時間分組
+                const timeGroups = {};
+                this.shop.businessHours.forEach(bh => {
+                    const key = `${bh.start || ''}-${bh.end || ''}-${bh.note || ''}`;
+                    if (!timeGroups[key]) {
+                        timeGroups[key] = {
+                            start: bh.start,
+                            end: bh.end,
+                            note: bh.note,
+                            days: []
+                        };
+                    }
+                    timeGroups[key].days.push(bh.day);
+                });
+
+                // 格式化輸出
+                const result = [];
+                Object.values(timeGroups).forEach(group => {
+                    if (group.note && group.note.trim() !== '') {
+                        // 有備註（如公休）
+                        result.push(`${group.days.join('、')}：${group.note}`);
+                    } else if (group.start && group.end) {
+                        // 有營業時間
+                        result.push(`${group.days.join('、')}：${group.start} ~ ${group.end}`);
+                    } else {
+                        // 無營業時間
+                        result.push(`${group.days.join('、')}：未營業`);
+                    }
+                });
+
+                return result.join('\n');
             },
             // 根據關鍵字過濾
             filteredCategories() {
@@ -207,32 +283,52 @@
                 this.openMenuItem(item); // 直接開啟 MenuItem Modal
             },
             // 根據路由參數載入店家資料
-            loadShop() {
+            async loadShop() {
+                this.loading = true; // 開始加載
                 const shopId = this.$route.params.id;
-                const shop = this.$store.getters['shops/getShopById'](shopId);
-                if (shop) {
+
+                try {
+                    // 首先嘗試從 store 中獲取
+                    let shop = this.$store.getters['shops/getShopById'](shopId);
+
+                    if (!shop) {
+                        // 如果 store 中沒有，嘗試從 API 獲取
+                        console.log('Store 中找不到店家，嘗試從 API 獲取:', shopId);
+                        shop = await this.$store.dispatch('shops/fetchShopById', shopId);
+                        // fetchShopById 現在會自動將店家加入到 allShops 中，無需額外呼叫 fetchAllShops
+                    }
+
                     this.shop = shop;
-                } else {
-                    // 如果找不到店家，顯示錯誤或導航回首頁
-                    alert('找不到該店家');
-                    this.$router.push('/');
+                    console.log('成功載入店家:', shop.name);
+                } catch (error) {
+                    console.error('獲取店家失敗:', error);
+                    this.shop = null; // 確保 shop 為 null，觸發錯誤顯示
+                } finally {
+                    this.loading = false; // 結束加載
                 }
             },
 
             toggleSidebar() { this.sidebarOpen = !this.sidebarOpen; },
             openUserModal() { this.editCustomer = { ...this.customer }; this.userModalOpen = true; },
             closeUserModal() { this.userModalOpen = false; },
-            async updateUserInfo() {
+            async updateUser() {
                 try {
+                    // 驗證電子郵件格式
+                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                    if (this.editCustomer.email && !emailRegex.test(this.editCustomer.email)) {
+                        alert('請輸入有效的電子郵件地址');
+                        return;
+                    }
+
                     const userId = this.editCustomer.id;
                     const updates = { ...this.editCustomer };
                     delete updates.id;
 
-                    console.log('Sending updates:', userId, updates); // ✅
+                    console.log('Sending updates:', userId, updates);
 
                     const result = await this.$store.dispatch('user/updateUser', { userId, updates });
 
-                    console.log('Update result:', result); // ✅
+                    console.log('Update result:', result);
                     alert('使用者資訊已更新！');
                     this.closeUserModal();
                 } catch (err) {
@@ -278,19 +374,100 @@
                 this.selectedProduct = {
                     id: dish.id,
                     itemName: dish.itemName,
-                    price: dish.price
+                    price: dish.price,
+                    description: dish.description,
+                    customOptions: dish.customOptions || [],
+                    imgUrl: dish.imgUrl, // 添加圖片URL
+                    storeId: this.shop.id // 添加店家ID
                 };
                 this.menuItemModalOpen = true;
             },
             closeMenuItem() {
                 this.menuItemModalOpen = false;
             },
-            handleAddToCart(cartItem) {
+            async handleAddToCart(cartItem) {
                 console.log('加入購物車:', cartItem);
-                // 設定店家 ID 到購物車
-                this.$store.dispatch('cart/setStoreId', this.shop.id);
-                // 加入商品到購物車
-                this.$store.dispatch('cart/addItem', cartItem);
+
+                const userId = this.customer.id;
+                if (!userId) {
+                    alert('請先登入');
+                    return;
+                }
+                
+                // 確保 storeId 存在
+                const storeId = this.shop?.id;
+                if (!storeId) {
+                    console.error('店家 ID 不存在:', this.shop);
+                    alert('無法取得店家資訊，請重新整理頁面');
+                    return;
+                }
+                
+                console.log('準備加入購物車 - 店家ID:', storeId, '商品:', cartItem);
+                
+                try {
+                    // 確保購物車數據是最新的，然後檢查跨店
+                    await this.$store.dispatch('cart/fetchCart');
+                    const currentStoreId = this.$store.state.cart.storeId;
+                    const hasItems = this.$store.state.cart.items.length > 0;
+                    
+                    // 數據異常：有商品但 storeId 為空
+                    if (hasItems && (!currentStoreId || currentStoreId === '')) {
+                        const confirmed = confirm(
+                            `購物車數據異常（店家資訊遺失）\n` +
+                            `是否清空購物車並加入新商品？\n\n` +
+                            `點擊「確定」清空購物車並繼續\n` +
+                            `點擊「取消」放棄操作`
+                        );
+                        
+                        if (!confirmed) {
+                            return;
+                        }
+                        
+                        // 清空購物車
+                        await this.$store.dispatch('cart/clearCart');
+                    }
+                    // 正常跨店檢查
+                    else if (hasItems && currentStoreId && currentStoreId !== storeId) {
+                        const confirmed = confirm(
+                            `購物車中已有「${this.getStoreName(currentStoreId)}」的商品\n` +
+                            `是否清空購物車並加入「${this.shop.name}」的商品？\n\n` +
+                            `點擊「確定」清空購物車並繼續\n` +
+                            `點擊「取消」放棄操作`
+                        );
+                        
+                        if (!confirmed) {
+                            return;
+                        }
+                        
+                        // 清空購物車
+                        await this.$store.dispatch('cart/clearCart');
+                    }
+                    
+                    await this.$store.dispatch('cart/addItem', {
+                        item: cartItem,
+                        storeId: storeId
+                    });
+
+                    // 確保狀態同步
+                    await this.$store.dispatch('cart/fetchCart');
+
+                    alert('已加入購物車');
+                } catch (err) {
+                    console.error('加入購物車失敗:', err);
+                    
+                    // 檢查是否是跨店錯誤
+                    if (err.message && err.message.includes('跨店')) {
+                        alert('購物車不可跨店點餐，請先清空購物車');
+                    } else {
+                        alert('加入購物車失敗: ' + err.message);
+                    }
+                }
+            },
+            
+            // 獲取店家名稱（用於跨店提示）
+            getStoreName(storeId) {
+                const shop = this.$store.getters['shops/getShopById'](storeId);
+                return shop ? shop.name : '其他店家';
             },
             // 檢查商品是否已收藏
             isItemFavorited(itemId) {
@@ -312,8 +489,8 @@
             },
             logout() {
                 this.$store.dispatch('user/logout'); // 呼叫 Vuex logout
-                localStorage.removeItem('token');    // 如果有 token
-                localStorage.removeItem('user');
+                sessionStorage.removeItem('token');    // 如果有 token
+                sessionStorage.removeItem('user');
                 this.$router.push('/login');         // 導向登入頁
             }
         }
@@ -426,16 +603,16 @@
     /* 店家名稱 + 收藏 */
     .shop-header {
         display: flex;
-        justify-content: center; /* 置中 */
+        justify-content: center;
         align-items: center;
         margin-top: 20px;
-        gap: 10px; /* 收藏按鈕和店名間距 */
+        gap: 10px; 
     }
 
     .shop-name {
         font-size: 28px;
         font-weight: bold;
-        color: #0069D9; /* 藍色 */
+        color: #0069D9; 
     }
 
     .favorite-btn {
@@ -733,6 +910,51 @@
     .favorite-btn.active span {
         color: red; /* 已收藏顯示紅色 */
     }
+
+    /* Shop info */
+    .shop-info {
+        margin-top: 20px;
+        padding: 20px;
+        border-radius: 8px;
+    }
+
+    .shop-description {
+        margin-bottom: 20px;
+    }
+
+    .shop-description h4 {
+        margin: 0 0 8px 0;
+        color: #0069D9;
+        font-size: 16px;
+        font-weight: 600;
+    }
+
+    .description-text {
+        margin: 0;
+        font-size: 14px;
+        line-height: 1.6;
+        color: #555;
+    }
+
+    .business-hours {
+        margin-bottom: 15px;
+    }
+
+    .business-hours h4 {
+        margin: 0 0 10px 0;
+        color: #0069D9;
+        font-size: 16px;
+        font-weight: 600;
+    }
+
+    .business-hours-text {
+        margin: 0;
+        font-family: inherit;
+        font-size: 14px;
+        line-height: 1.6;
+        white-space: pre-line;
+        color: #333;
+    }
     .sidebar-logout {
         margin-top: auto; /* 推到底部 */
         width: 100%;
@@ -776,4 +998,70 @@
       .search-suggestions li:hover {
           background-color: #f2f6ff;
       }
+      .shop-hero {
+    position: relative;
+    width: 100%;
+    height: 180px;                 /* 高度可自行調整 */
+    background-image: url('@/assets/logo.png'); /* 預設圖 */
+    background-size: cover;
+    background-position: center;
+    border-radius: 0 0 16px 16px;
+    margin-bottom: 20px;
+}
+
+/* 半透明遮罩（關鍵） */
+.shop-hero-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.65); /* 白色半透明 */
+    backdrop-filter: blur(2px);            /* 可要可不要 */
+}
+
+/* 加載和錯誤狀態 */
+.loading-container, .error-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    padding: 40px;
+    text-align: center;
+}
+
+.loading-spinner {
+    width: 50px;
+    height: 50px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #0069D9;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 20px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.loading-container p, .error-container p {
+    font-size: 18px;
+    color: #666;
+    margin-bottom: 20px;
+}
+
+.error-container button {
+    padding: 10px 20px;
+    background-color: #0069D9;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s;
+}
+
+.error-container button:hover {
+    background-color: #0056b3;
+}
+
 </style>

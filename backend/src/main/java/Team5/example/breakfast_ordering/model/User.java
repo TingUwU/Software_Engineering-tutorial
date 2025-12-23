@@ -36,8 +36,11 @@ public class User {
 
     private String phone = "";    // 電話
 
-    @Indexed(unique = true) 
     private String email;         // 電子郵件
+
+    private AuthProvider provider;  // 紀錄是使用哪種方式登入
+
+    private String providerId;      // 記錄第三方登入給的唯一 ID
 
     // 儲存 Store 的 ID 字串
     private List<String> favorStores = new ArrayList<>();       // 收藏店家
@@ -50,16 +53,38 @@ public class User {
     private Date updatedAt;      // 更新時間
 
     ///////////////////////////////////////////
+    
+    public enum AuthProvider {
+        LOCAL, GOOGLE, FACEBOOK
+    }
 
     public static class FavorItem {
         private String storeId;
         private String itemId;
+        private List<String> customizations; // 客製化選項
+        private Integer quantity; // 商品數量
 
         public FavorItem(){}
 
         public FavorItem(String storeId, String itemId){
             this.storeId = storeId;
             this.itemId = itemId;
+            this.customizations = new ArrayList<>();
+            this.quantity = 1;
+        }
+
+        public FavorItem(String storeId, String itemId, List<String> customizations){
+            this.storeId = storeId;
+            this.itemId = itemId;
+            this.customizations = customizations != null ? customizations : new ArrayList<>();
+            this.quantity = 1;
+        }
+
+        public FavorItem(String storeId, String itemId, List<String> customizations, Integer quantity){
+            this.storeId = storeId;
+            this.itemId = itemId;
+            this.customizations = customizations != null ? customizations : new ArrayList<>();
+            this.quantity = quantity != null ? quantity : 1;
         }
 
         public String getStoreId(){
@@ -74,6 +99,20 @@ public class User {
         }
         public void setItemId(String itemId){
             this.itemId = itemId;
+        }
+
+        public List<String> getCustomizations(){
+            return customizations;
+        }
+        public void setCustomizations(List<String> customizations){
+            this.customizations = customizations != null ? customizations : new ArrayList<>();
+        }
+
+        public Integer getQuantity(){
+            return quantity;
+        }
+        public void setQuantity(Integer quantity){
+            this.quantity = quantity != null ? quantity : 1;
         }
     }
 
@@ -180,6 +219,22 @@ public class User {
     }
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public AuthProvider getProvider(){
+        return provider;
+    }
+
+    public void setProvider(AuthProvider provider){
+        this.provider = provider;
+    }
+
+    public String getProviderId(){
+        return providerId;
+    }
+
+    public void setProviderId(String providerId){
+        this.providerId = providerId;
     }
 
     public List<String> getFavorStores() {

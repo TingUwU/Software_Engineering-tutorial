@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:3000/api/stores'
+const API_URL = 'http://localhost:8088/api/stores'
 
 export default {
   namespaced: true,
@@ -73,7 +73,7 @@ export default {
       }
 
     },
-    async fetchShopById({commit}, shopId){
+    async fetchShopById({commit, state}, shopId){
       commit('SET_LOADING', true)
       commit('CLEAR_ERROR')
 
@@ -85,6 +85,17 @@ export default {
         }
         const shop = await res.json()
         commit('SET_CURRENT_SHOP', shop)
+
+        // 同時將這個店家加入到 allShops 陣列中，避免重複載入
+        const existingShopIndex = state.allShops.findIndex(s => s.id === shop.id)
+        if (existingShopIndex >= 0) {
+          // 如果已存在，更新它
+          state.allShops.splice(existingShopIndex, 1, shop)
+        } else {
+          // 如果不存在，加入陣列
+          state.allShops.push(shop)
+        }
+
         console.log('成功取得店家:', shop.name);
         return shop;
 

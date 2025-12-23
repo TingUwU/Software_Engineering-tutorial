@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:3000/api/orders'
+const API_URL = 'http://localhost:8088/api/orders'
 
 export default {
   namespaced: true,
@@ -28,6 +28,30 @@ export default {
       try {
         const res = await fetch(API_URL)
         if (!res.ok) throw new Error('取得訂單列表失敗')
+        const data = await res.json()
+        commit('SET_ORDERS', data)
+        return data
+      } catch (err) {
+        console.error(err)
+        throw err
+      }
+    },
+    async fetchStoreOrders({ commit }, storeId) {
+      try {
+        const res = await fetch(`${API_URL}/store/${storeId}`)
+        if (!res.ok) throw new Error('取得商家訂單失敗')
+        const data = await res.json()
+        commit('SET_ORDERS', data)
+        return data
+      } catch (err) {
+        console.error(err)
+        throw err
+      }
+    },
+    async fetchCustomerOrders({ commit }, customerId) {
+      try {
+        const res = await fetch(`${API_URL}/customer/${customerId}`)
+        if (!res.ok) throw new Error('取得顧客訂單失敗')
         const data = await res.json()
         commit('SET_ORDERS', data)
         return data

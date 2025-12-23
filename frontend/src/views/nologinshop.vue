@@ -1,5 +1,27 @@
 <template>
   <div class="shop">
+    <!-- 加載狀態 -->
+    <div v-if="loading" class="loading-container">
+      <div class="loading-spinner"></div>
+      <p>載入中...</p>
+    </div>
+
+    <!-- 錯誤狀態 -->
+    <div v-else-if="!shop" class="error-container">
+      <p>找不到該店家</p>
+      <button @click="$router.push('/')">返回首頁</button>
+    </div>
+
+    <!-- 主要內容 -->
+    <div v-else>
+      <div
+        class="shop-hero"
+        :style="{
+          backgroundImage: `url(${shop.coverImage || require('@/assets/logo.png')})`
+        }"
+      >
+  <div class="shop-hero-overlay"></div>
+</div>
     <!-- 遮罩層 -->
     <div v-show="sidebarOpen" class="overlay" @click="toggleSidebar"></div>
 
@@ -11,7 +33,7 @@
       </div>
       <ul>
         <router-link to="/nologincart"><li>購物車</li></router-link>
-        <li @click="needLogin">訂單管理</li>
+        <router-link to="/nologinorder"><li>訂單管理</li></router-link>
       </ul>
       <!-- 登入按鈕 -->
       <div class="sidebar-login">
@@ -35,7 +57,14 @@
 
     <!-- 店家資訊 -->
     <div class="shop-info">
-      <p>營業時間: {{ todayBusiness.start || '未營業' }} ~ {{ todayBusiness.close || '未營業' }}</p>
+      <div v-if="shop.description" class="shop-description">
+        <h4>店家簡介</h4>
+        <p class="description-text">{{ shop.description }}</p>
+      </div>
+      <div class="business-hours">
+        <h4>營業時間</h4>
+        <pre class="business-hours-text">{{ formattedBusinessHours }}</pre>
+      </div>
       <p>地址: {{ shop.address }}</p>
     </div>
 
@@ -109,6 +138,7 @@
       @close="closeMenuItem"
       @add-to-cart="handleAddToCart"
     />
+    </div>
   </div>
 </template>
 
@@ -124,18 +154,23 @@ export default {
       menuItemModalOpen: false,
       keyword: '',
       shop: null,
+      loading: true, // 加載狀態
       selectedProduct: {},
       categoryRefs: {}
     }
   },
 
-  created() {
-    this.loadShop()
+  async created() {
+    // 設置訪客模式
+    this.$store.dispatch('cart/setGuestMode', true)
+    await this.loadShop()
   },
 
   watch: {
-    '$route.params.id'() {
-      this.loadShop()
+    '$route.params.id': async function(newId) {
+      if (newId) {
+        await this.loadShop()
+      }
     }
   },
 
@@ -152,9 +187,48 @@ export default {
     },
     todayBusiness() {
       if (!this.shop) return {}
-      const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
+      const days = ['星期日','星期一','星期二','星期三','星期四','星期五','星期六']
       const today = days[new Date().getDay()]
       return this.shop.businessHours.find(h => h.day === today) || {}
+    },
+
+    // 格式化營業時間顯示
+    formattedBusinessHours() {
+      if (!this.shop || !this.shop.businessHours || this.shop.businessHours.length === 0) {
+        return '暫無營業時間資訊';
+      }
+
+      // 將營業時間按時間分組
+      const timeGroups = {};
+      this.shop.businessHours.forEach(bh => {
+        const key = `${bh.start || ''}-${bh.end || ''}-${bh.note || ''}`;
+        if (!timeGroups[key]) {
+          timeGroups[key] = {
+            start: bh.start,
+            end: bh.end,
+            note: bh.note,
+            days: []
+          };
+        }
+        timeGroups[key].days.push(bh.day);
+      });
+
+      // 格式化輸出
+      const result = [];
+      Object.values(timeGroups).forEach(group => {
+        if (group.note && group.note.trim() !== '') {
+          // 有備註（如公休）
+          result.push(`${group.days.join('、')}：${group.note}`);
+        } else if (group.start && group.end) {
+          // 有營業時間
+          result.push(`${group.days.join('、')}：${group.start} ~ ${group.end}`);
+        } else {
+          // 無營業時間
+          result.push(`${group.days.join('、')}：未營業`);
+        }
+      });
+
+      return result.join('\n');
     },
 
     filteredCategories() {
@@ -175,14 +249,29 @@ export default {
 
         this.openMenuItem(item); // 直接開啟 MenuItem Modal
     },
-    loadShop() {
-      const shopId = this.$route.params.id
-      const shop = this.$store.getters['shops/getShopById'](shopId)
-      if (!shop) {
-        alert('找不到店家')
-        this.$router.push('/')
+    async loadShop() {
+      this.loading = true;
+      const shopId = this.$route.params.id;
+
+      try {
+        // 首先嘗試從 store 中獲取
+        let shop = this.$store.getters['shops/getShopById'](shopId);
+
+        if (!shop) {
+          // 如果 store 中沒有，嘗試從 API 獲取
+          console.log('Store 中找不到店家，嘗試從 API 獲取:', shopId);
+          shop = await this.$store.dispatch('shops/fetchShopById', shopId);
+          // fetchShopById 現在會自動將店家加入到 allShops 中，無需額外呼叫 fetchAllShops
+        }
+
+        this.shop = shop;
+        console.log('成功載入店家:', shop.name);
+      } catch (error) {
+        console.error('獲取店家失敗:', error);
+        this.shop = null; // 確保 shop 為 null，觸發錯誤顯示
+      } finally {
+        this.loading = false; // 結束加載
       }
-      this.shop = shop
     },
 
     toggleSidebar() {
@@ -211,9 +300,14 @@ export default {
       this.menuItemModalOpen = false
     },
 
-    handleAddToCart(item) {
-      this.$store.dispatch('cart/setStoreId', this.shop.id)
-      this.$store.dispatch('cart/addItem', item)
+    async handleAddToCart(item) {
+      const result = await this.$store.dispatch('cart/addItem', { item, storeId: this.shop.id })
+
+      // 如果 result 不是 false，表示添加成功
+      if (result !== false) {
+        alert('已加入購物車')
+      }
+      // 如果 result 是 false，表示用戶取消了操作，不顯示 alert
     },
     goLogin() {
       this.sidebarOpen = false; // 點擊後關閉側邊欄
@@ -342,8 +436,53 @@ export default {
     }
 
     /* 店家資訊 */
+    .shop-info {
+        margin-top: 20px;
+        padding: 20px;
+        background: #f8f9fa;
+        border-radius: 8px;
+    }
+
+    .shop-description {
+        margin-bottom: 20px;
+    }
+
+    .shop-description h4 {
+        margin: 0 0 8px 0;
+        color: #0069D9;
+        font-size: 16px;
+        font-weight: 600;
+    }
+
+    .description-text {
+        margin: 0;
+        font-size: 14px;
+        line-height: 1.6;
+        color: #555;
+    }
+
     .shop-info p {
         margin: 4px 0;
+    }
+
+    .business-hours {
+        margin-bottom: 15px;
+    }
+
+    .business-hours h4 {
+        margin: 0 0 10px 0;
+        color: #0069D9;
+        font-size: 16px;
+        font-weight: 600;
+    }
+
+    .business-hours-text {
+        margin: 0;
+        font-family: inherit;
+        font-size: 14px;
+        line-height: 1.6;
+        white-space: pre-line;
+        color: #333;
     }
 
     /* 搜尋欄 */
@@ -644,4 +783,70 @@ export default {
       .search-suggestions li:hover {
           background-color: #f2f6ff;
       }
+      .shop-hero {
+    position: relative;
+    width: 100%;
+    height: 180px;                 /* 高度可自行調整 */
+    background-image: url('@/assets/logo.png'); /* 預設圖 */
+    background-size: cover;
+    background-position: center;
+    border-radius: 0 0 16px 16px;
+    margin-bottom: 20px;
+}
+
+/* 半透明遮罩（關鍵） */
+.shop-hero-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.65); /* 白色半透明 */
+    backdrop-filter: blur(2px);            /* 可要可不要 */
+}
+
+/* 加載和錯誤狀態 */
+.loading-container, .error-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    padding: 40px;
+    text-align: center;
+}
+
+.loading-spinner {
+    width: 50px;
+    height: 50px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #0069D9;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 20px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.loading-container p, .error-container p {
+    font-size: 18px;
+    color: #666;
+    margin-bottom: 20px;
+}
+
+.error-container button {
+    padding: 10px 20px;
+    background-color: #0069D9;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s;
+}
+
+.error-container button:hover {
+    background-color: #0056b3;
+}
+
 </style>

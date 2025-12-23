@@ -1,7 +1,7 @@
 // import { ref } from 'vue'
 // import { createStore } from 'vuex'
 
-const API_URL = 'http://localhost:3000/api/users'
+const API_URL = 'http://localhost:8088/api/users'
 
 export default {
   namespaced: true,
@@ -55,7 +55,7 @@ export default {
     }
   },
   actions: {
-    async register({ commit }, registerData) {
+    async register({ commit, dispatch }, registerData) {
       const res = await fetch(`${API_URL}/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -68,10 +68,15 @@ export default {
       const data = await res.json()
       commit('UPDATE_CUSTOMER', data)
       commit('LOGIN')
+      
+      if (data.id) {
+        dispatch('cart/setUserId', data.id, { root: true })
+      }
+      
       return data
     },
 
-    async login({ commit }, loginData) {
+    async login({ commit, dispatch }, loginData) {
       const res = await fetch(`${API_URL}/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -84,6 +89,11 @@ export default {
       const data = await res.json()
       commit('UPDATE_CUSTOMER', data)
       commit('LOGIN')
+      
+      if (data.id) {
+        dispatch('cart/setUserId', data.id, { root: true })
+      }
+      
       return data
     },
 
@@ -211,6 +221,68 @@ export default {
       const userId = state.customer.id
       const res = await fetch(`${API_URL}/${userId}/custom-combos/${comboId}`, { method: 'DELETE' })
       if (!res.ok) throw new Error('刪除失敗')
+      const data = await res.json()
+      commit('UPDATE_CUSTOMER', data)
+      return data
+    },
+
+    async addCustomComboItem({ commit, state }, { comboId, storeId, itemId, customizations = [], quantity = 1 }) {
+      const userId = state.customer.id
+      const res = await fetch(`${API_URL}/${userId}/custom-combos/${comboId}/items/${storeId}/${itemId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customizations, quantity })
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.message || '加入失敗')
+      }
+      const data = await res.json()
+      commit('UPDATE_CUSTOMER', data)
+      return data
+    },
+
+    async deleteCustomComboItem({ commit, state }, { comboId, storeId, itemId }) {
+      const userId = state.customer.id
+      const res = await fetch(`${API_URL}/${userId}/custom-combos/${comboId}/items/${storeId}/${itemId}`, {
+        method: 'DELETE'
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.message || '移除失敗')
+      }
+      const data = await res.json()
+      commit('UPDATE_CUSTOMER', data)
+      return data
+    },
+
+    async getCustomCombos({ commit, state }) {
+      const userId = state.customer.id
+      const res = await fetch(`${API_URL}/${userId}/custom-combos`)
+      if (!res.ok) throw new Error('取得自訂組合失敗')
+      const data = await res.json()
+      commit('UPDATE_CUSTOMER', { customCombos: data })
+      return data
+    },
+
+    async getCustomComboDetail({ state }, comboId) {
+      const userId = state.customer.id
+      const res = await fetch(`${API_URL}/${userId}/custom-combos/${comboId}`)
+      if (!res.ok) throw new Error('取得組合詳細資訊失敗')
+      return await res.json()
+    },
+
+    async updateCustomComboItem({ commit, state }, { comboId, storeId, itemId, updates }) {
+      const userId = state.customer.id
+      const res = await fetch(`${API_URL}/${userId}/custom-combos/${comboId}/items/${storeId}/${itemId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates)
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.message || '更新失敗')
+      }
       const data = await res.json()
       commit('UPDATE_CUSTOMER', data)
       return data

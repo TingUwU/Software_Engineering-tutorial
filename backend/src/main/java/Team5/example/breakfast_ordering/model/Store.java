@@ -25,6 +25,7 @@ public class Store {
     private boolean isActive;
     private String updatedAt;
     private String ownerId;
+    private String avatar; // 商家頭貼
     private List<MenuItem> menu;
 
     // Getters and Setters
@@ -63,6 +64,9 @@ public class Store {
 
     public String getOwnerId() { return ownerId; }
     public void setOwnerId(String ownerId) { this.ownerId = ownerId; }
+
+    public String getAvatar() { return avatar; }
+    public void setAvatar(String avatar) { this.avatar = avatar; }
 
     public List<MenuItem> getMenu() { return menu; }
     public void setMenu(List<MenuItem> menu) { this.menu = menu; }

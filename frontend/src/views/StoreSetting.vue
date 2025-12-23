@@ -11,8 +11,9 @@
         </div>
         <ul>
             <li @click="openUserModal">使用者資訊</li>
-            <router-link to="/store-management"><li>主頁面</li></router-link>
-            
+            <router-link to="/store-management"><li>菜單設定</li></router-link>
+            <router-link to="/merchant-order"><li>訂單管理</li></router-link>
+            <router-link to="/store-setting"><li>編輯店家資訊</li></router-link>
         </ul>
         <div class="sidebar-logout">
             <button @click="logout">登出</button>
@@ -22,7 +23,7 @@
     <!-- 左上角顧客頭像 -->
     <img v-if="customer" class="avatar" :src="customer.photo || require('@/assets/logo.png')" alt="user" @click="toggleSidebar">
 
-    <h1>StoreSetting</h1>
+    <h1>{{ vm.isEditMode ? '編輯店家資訊' : '新增店家' }}</h1>
 
     <form class="form" @submit.prevent="onSubmit">
       <section>
@@ -38,6 +39,13 @@
             <option value="中式">中式</option>
             <option value="西式">西式</option>
           </select>
+        </div>
+        <div class="row">
+          <label>商家頭貼</label>
+          <div class="avatar-upload">
+            <img :src="vm.store.avatar || require('@/assets/logo.png')" class="avatar-preview" alt="店家頭貼">
+            <input type="file" @change="onStoreAvatarChange" accept="image/*" style="margin-top: 8px;">
+          </div>
         </div>
         <div class="row">
           <label>店家簡介</label>
@@ -58,16 +66,6 @@
         <div class="row">
           <label>店家地址*</label>
           <input v-model="vm.store.address" type="text" required />
-        </div>
-        <div class="row two">
-          <div>
-            <label>經度*</label>
-            <input v-model.number="vm.lng" type="number" step="0.000001" required />
-          </div>
-          <div>
-            <label>緯度*</label>
-            <input v-model.number="vm.lat" type="number" step="0.000001" required />
-          </div>
         </div>
       </section>
 
@@ -148,7 +146,7 @@
                     <input type="email" v-model="editCustomer.email">
                 </div>
                 <div class="modal-actions">
-                    <button type="submit" @click="updateUserInfo">儲存</button>
+                    <button type="submit">儲存</button>
                     <button type="button" @click="closeUserModal">關閉</button>
                 </div>
             </form>
@@ -160,22 +158,58 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useStore } from 'vuex';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import useStoreSettingViewModel from '../viewmodels/storeSettingViewModel.js';
 
 const store = useStore();
 const router = useRouter();
+const route = useRoute();
 const vm = useStoreSettingViewModel();
 const WEEKDAYS = ['星期一','星期二','星期三','星期四','星期五','星期六','星期日'];
 
-// 页面加载时设置 ownerId
-onMounted(() => {
+// 页面加载时设置 ownerId 或加载店家数据
+onMounted(async () => {
   const userId = store.getters['user/customer']?.id;
-  if (userId) {
-    vm.store.ownerId = userId;
-  } else {
+  if (!userId) {
     alert('請先登入');
     router.push('/login');
+    return;
+  }
+
+  vm.store.ownerId = userId;
+
+  // 如果有 id 参数，表示为编辑模式，直接載入指定店家
+  if (route.params.id) {
+    const success = await vm.loadStore(route.params.id);
+    if (!success) {
+      // 顯示具體的錯誤信息
+      const errorMessage = vm.validationErrors.length > 0
+        ? vm.validationErrors.join('\n')
+        : '無法載入店家資料';
+      alert(`載入失敗：\n\n${errorMessage}`);
+      router.push('/store-management');
+    }
+  } else {
+    // 如果沒有 id 參數，嘗試載入用戶現有的店家（如果有的話）
+    try {
+      const res = await fetch('http://localhost:8088/api/stores');
+      if (res.ok) {
+        const stores = await res.json();
+        const myStore = stores.find(s => s.ownerId === userId);
+
+        if (myStore) {
+          // 用戶已經有店家，載入現有數據以便編輯
+          const success = await vm.loadStore(myStore.id);
+          if (!success) {
+            console.warn('無法載入現有店家資料，將以空白表單開始');
+          }
+        }
+        // 如果沒有找到店家，就保持空白表單（創建模式）
+      }
+    } catch (error) {
+      console.warn('檢查現有店家時發生錯誤:', error);
+      // 忽略錯誤，繼續以空白表單開始
+    }
   }
 });
 
@@ -205,8 +239,15 @@ function closeUserModal() {
   userModalOpen.value = false;
 }
 
-async function updateUserInfo() {
+async function updateUser() {
   try {
+    // 驗證電子郵件格式
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (editCustomer.value.email && !emailRegex.test(editCustomer.value.email)) {
+      alert('請輸入有效的電子郵件地址');
+      return;
+    }
+
     const userId = editCustomer.value.id;
     const updates = { ...editCustomer.value };
     delete updates.id;
@@ -235,20 +276,36 @@ function onAvatarChange(event) {
   }
 }
 
+function onStoreAvatarChange(event) {
+  const file = event.target.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      vm.store.avatar = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+}
+
 function logout() {
   store.dispatch('user/logout');
-  localStorage.removeItem('token');
-  localStorage.removeItem('user');
+  sessionStorage.removeItem('token');
+  sessionStorage.removeItem('user');
   router.push('/login');
 }
 
 async function onSubmit() {
   const ok = await vm.submitForm();
   if (ok) {
-    alert('店家建立成功！');
+    alert(vm.isEditMode ? '店家資訊更新成功！' : '店家建立成功！');
     router.push('/store-management');
   } else {
-    alert('建立失敗，請檢查表單錯誤');
+    // 顯示具體的錯誤信息
+    const errorMessage = vm.validationErrors.length > 0 
+      ? vm.validationErrors.join('\n') 
+      : '操作失敗，請稍後再試';
+    const title = vm.isEditMode ? '更新失敗' : '建立失敗';
+    alert(`${title}：\n\n${errorMessage}`);
   }
 }
 </script>
@@ -314,6 +371,21 @@ button.danger { background: #ffe8e8; border: 1px solid #ffb3b3; }
     object-fit: cover;
     display: block;
     margin-bottom: 8px;
+}
+
+.avatar-preview {
+    width: 100px;
+    height: 100px;
+    border-radius: 8px;
+    object-fit: cover;
+    display: block;
+    border: 2px solid #ddd;
+}
+
+.avatar-upload {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
 }
 
 /* 側邊欄 */

@@ -103,7 +103,7 @@ const handleLogin = async () => {
     const userData = await store.dispatch('user/login', loginData)
     
     // 同時存入 localStorage，刷新頁面仍能保持登入
-    localStorage.setItem('user', JSON.stringify(userData))
+    sessionStorage.setItem('user', JSON.stringify(userData))
     
     alert('登入成功！')
     

@@ -6,13 +6,18 @@ import java.util.Optional;
 
 import Team5.example.breakfast_ordering.model.Cart;
 import Team5.example.breakfast_ordering.model.Cart.CartItem;
+import Team5.example.breakfast_ordering.model.Store;
 import Team5.example.breakfast_ordering.repository.CartRepository;
+import Team5.example.breakfast_ordering.repository.StoreRepository;
 
 @RestController
 @RequestMapping("/api/carts")
 public class CartController {
     @Autowired
     private CartRepository cartRepository;
+
+    @Autowired
+    private StoreRepository storeRepository;
 
     // 用 userId 回傳該使用者的購物車
     @GetMapping("/{userId}")
@@ -41,15 +46,59 @@ public class CartController {
 
         cart.setStoreId(storeId);
         Optional<CartItem> existingItems = cart.getItems().stream()
-                                           .filter(item -> item.getItemId().equals(newItem.getItemId()) &&
-                                                           String.valueOf(item.getDescription()).equals(newItem.getDescription()))
+                                           .filter(item -> {
+                                               // 比較 itemId
+                                               if (!item.getItemId().equals(newItem.getItemId())) {
+                                                   return false;
+                                               }
+
+                                               // 比較 description（處理 null 和空字符串的情況）
+                                               String itemDesc = item.getDescription();
+                                               String newItemDesc = newItem.getDescription();
+
+                                               // 兩個都為 null 或都為空字符串，視為相等
+                                               if ((itemDesc == null || itemDesc.isEmpty()) &&
+                                                   (newItemDesc == null || newItemDesc.isEmpty())) {
+                                                   return true;
+                                               }
+                                               // 都不為 null，比較內容
+                                               if (itemDesc != null && newItemDesc != null) {
+                                                   return itemDesc.equals(newItemDesc);
+                                               }
+                                               // 一個為 null 或空，一個不為，視為不相等
+                                               return false;
+                                           })
                                            .findFirst();
         if(existingItems.isPresent()){
             CartItem item = existingItems.get();
             item.setQuantity(item.getQuantity() + newItem.getQuantity());
             item.setSubtotal(item.getPrice() * item.getQuantity());
+
+            // 如果現有項目沒有圖片URL，嘗試從店家資料中獲取
+            if (item.getImgUrl() == null || item.getImgUrl().isEmpty()) {
+                Store store = storeRepository.findById(storeId).orElse(null);
+                if (store != null) {
+                    Store.MenuItem existingMenuItem = store.getMenu().stream()
+                        .filter(menuItem -> menuItem.getId().toString().equals(item.getItemId()))
+                        .findFirst().orElse(null);
+                    if (existingMenuItem != null && existingMenuItem.getImgUrl() != null) {
+                        item.setImgUrl(existingMenuItem.getImgUrl());
+                    }
+                }
+            }
         }
         else{
+            // 從店家資料中獲取商品圖片URL
+            Store store = storeRepository.findById(storeId).orElse(null);
+            if (store != null) {
+                Store.MenuItem menuItem = store.getMenu().stream()
+                    .filter(item -> item.getId().toString().equals(newItem.getItemId()))
+                    .findFirst().orElse(null);
+                if (menuItem != null) {
+                    newItem.setImgUrl(menuItem.getImgUrl());
+                }
+            }
+
             newItem.setSubtotal(newItem.getPrice() * newItem.getQuantity());
             cart.getItems().add(newItem);
         }
@@ -69,8 +118,15 @@ public class CartController {
             throw new RuntimeException("商品不存在在購物車中");
         }
 
+        // 如果購物車已空，直接刪除整個購物車記錄
         if(cart.getItems().isEmpty()){
-            cart.setStoreId(null);
+            cartRepository.delete(cart);
+            // 返回空的購物車物件（不存入資料庫）
+            Cart emptyCart = new Cart();
+            emptyCart.setUserId(userId);
+            emptyCart.setStoreId(null);
+            emptyCart.setTotalPrice(0);
+            return emptyCart;
         }
 
         cart.recalculateTotalPrice();
@@ -83,10 +139,8 @@ public class CartController {
         Cart cart = cartRepository.findByUserId(userId)
                     .orElseThrow(() -> new RuntimeException("購物車不存在"));
 
-        cart.getItems().clear();
-        cart.setStoreId(null);
-        cart.setTotalPrice(0);
-        cartRepository.save(cart);
+        // 直接刪除整個購物車記錄
+        cartRepository.delete(cart);
 
         return "使用者 ID 為：" + userId + "的購物車已清空";
     }

@@ -10,6 +10,7 @@
                 <span class="username">{{ customer.nickname }}, 肚子餓了嗎</span>
             </div>
             <ul>
+                <router-link to="/home"><li>首頁</li></router-link>
                 <li @click="openUserModal">使用者資訊</li>
                 <router-link to="/cart"><li>購物車</li></router-link>
                 <router-link to="/order"><li>訂單管理</li></router-link>
@@ -69,7 +70,7 @@
                                  :key="shop.id"
                                  :to="{ name: 'ShopView', params: { id: shop.id } }"
                                  class="shop-card">
-                        <img :src="shop.menu[0]?.imgUrl || require('@/assets/logo.png')" class="shop-img" alt="店家圖片">
+                        <img :src="shop.avatar || shop.menu?.[0]?.imgUrl || require('@/assets/logo.png')" class="shop-img" alt="店家圖片">
                         <p class="shop-name">{{ shop.name }}</p>
                     </router-link>
                 </div>
@@ -87,7 +88,7 @@
                                  :key="shop.id"
                                  :to="{ name: 'ShopView', params: { id: shop.id } }"
                                  class="shop-card">
-                        <img :src="shop.menu[0]?.imgUrl || require('@/assets/logo.png')" class="shop-img" alt="店家圖片">
+                        <img :src="shop.avatar || shop.menu?.[0]?.imgUrl || require('@/assets/logo.png')" class="shop-img" alt="店家圖片">
                         <p class="shop-name">{{ shop.name }}</p>
                     </router-link>
                 </div>
@@ -119,7 +120,7 @@
                         <input type="email" v-model="editCustomer.email">
                     </div>
                     <div class="modal-actions">
-                        <button type="submit" @click="updateUserInfo">儲存</button>
+                        <button type="submit">儲存</button>
                         <button type="button" @click="closeUserModal">關閉</button>
                     </div>
                 </form>
@@ -199,9 +200,14 @@
         },
         
         async mounted() {
-            // 從後端載入所有店家
+            // 從後端載入所有店家（只有在沒有數據時才載入）
             try {
-                await this.$store.dispatch('shops/fetchAllShops')
+                const existingShops = this.$store.getters['shops/allShops'];
+                if (!existingShops || existingShops.length === 0) {
+                    await this.$store.dispatch('shops/fetchAllShops');
+                } else {
+                    console.log('使用已存在的店家數據:', existingShops.length, '家店');
+                }
             } catch (err) {
                 console.error('載入店家失敗:', err);
                 alert('載入店家失敗，請稍後再試');
@@ -232,17 +238,24 @@
             closeUserModal() {
                 this.userModalOpen = false;
             },
-            async updateUserInfo() {
+            async updateUser() {
                 try {
+                    // 驗證電子郵件格式
+                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                    if (this.editCustomer.email && !emailRegex.test(this.editCustomer.email)) {
+                        alert('請輸入有效的電子郵件地址');
+                        return;
+                    }
+
                     const userId = this.editCustomer.id;
                     const updates = { ...this.editCustomer };
                     delete updates.id;
 
-                    console.log('Sending updates:', userId, updates); // ✅
+                    console.log('Sending updates:', userId, updates);
 
                     const result = await this.$store.dispatch('user/updateUser', { userId, updates });
 
-                    console.log('Update result:', result); // ✅
+                    console.log('Update result:', result); 
                     alert('使用者資訊已更新！');
                     this.closeUserModal();
                 } catch (err) {
@@ -265,9 +278,76 @@
             closeMenuItemModal() {
                 this.menuItemModalOpen = false;
             },
-            handleAddToCart(cartItem) {
+            async handleAddToCart(cartItem) {
                 console.log('加入購物車:', cartItem);
-                this.$store.dispatch('cart/addItem', cartItem);
+
+                const userId = this.customer.id;
+                if (!userId) {
+                    alert('請先登入');
+                    return;
+                }
+
+                // 確保 storeId 存在
+                const storeId = this.$store.state.cart.storeId;
+                if (!storeId) {
+                    console.error('店家 ID 不存在');
+                    alert('無法取得店家資訊，請重新整理頁面');
+                    return;
+                }
+
+                console.log('準備加入購物車 - 店家ID:', storeId, '商品:', cartItem);
+
+                try {
+                    // 檢查是否跨店或購物車數據異常
+                    const currentStoreId = this.$store.state.cart.storeId;
+                    const hasItems = this.$store.state.cart.items.length > 0;
+
+                    // 數據異常：有商品但 storeId 為空
+                    if (hasItems && (!currentStoreId || currentStoreId === '')) {
+                        const confirmed = confirm(
+                            `購物車數據異常（店家資訊遺失）\n` +
+                            `是否清空購物車並加入新商品？\n\n` +
+                            `點擊「確定」清空購物車並繼續\n` +
+                            `點擊「取消」放棄操作`
+                        );
+
+                        if (!confirmed) {
+                            return;
+                        }
+
+                        // 清空購物車
+                        await this.$store.dispatch('cart/clearCart');
+                    }
+                    // 正常跨店檢查
+                    else if (hasItems && currentStoreId && currentStoreId !== storeId) {
+                        const confirmed = confirm(
+                            `購物車中已有其他店家的商品\n` +
+                            `是否清空購物車並加入新商品？\n\n` +
+                            `點擊「確定」清空購物車並繼續\n` +
+                            `點擊「取消」放棄操作`
+                        );
+
+                        if (!confirmed) {
+                            return;
+                        }
+
+                        // 清空購物車
+                        await this.$store.dispatch('cart/clearCart');
+                    }
+
+                    await this.$store.dispatch('cart/addItem', { item: cartItem, storeId });
+
+                    alert('已加入購物車');
+                } catch (err) {
+                    console.error('加入購物車失敗:', err);
+
+                    // 檢查是否是跨店錯誤
+                    if (err.message && err.message.includes('跨店')) {
+                        alert('購物車不可跨店點餐，請先清空購物車');
+                    } else {
+                        alert('加入購物車失敗: ' + err.message);
+                    }
+                }
             },
             onAvatarChange(event) {
                 const file = event.target.files[0];
@@ -281,8 +361,8 @@
             },
             logout() {
                 this.$store.dispatch('user/logout'); // 呼叫 Vuex logout
-                localStorage.removeItem('token');    // 如果有 token
-                localStorage.removeItem('user');
+                sessionStorage.removeItem('token');    // 如果有 token
+                sessionStorage.removeItem('user');
                 this.$router.push('/login');         // 導向登入頁
             }
         }
@@ -540,14 +620,15 @@
         width: 100%;
         height: 110px;
         border-radius: 12px 12px 0 0;
-        object-fit: cover;
+        object-fit: contain;
+        display: block;
     }
 
     .shop-name {
         margin-top: 8px;
         font-weight: bold;
-        color: #000; /* 黑色文字 */
-        text-decoration: none; /* 去掉底線 */
+        color: #000; 
+        text-decoration: none;
     }
 
 

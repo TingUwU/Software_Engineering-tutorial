@@ -28,6 +28,7 @@
                   <input type="text" v-model="editItem.itemName" placeholder="請輸入餐點名稱" />
                 </div>
                 <div class="form-group">
+                  <label class="form-group-label">價格:</label>
                   <input type="number" v-model.number="editItem.price" placeholder="請輸入價格" min="0" />
                 </div>
               </div>
@@ -58,9 +59,9 @@
                   </option>
                 </select>
               </div>
-              <!-- 自訂組合選項 -->
+              <!-- 客製化選項 -->
              <div class="form-group">
-                <label>自訂組合選項</label>
+                <label>客製化選項</label>
                 <div class="customization-list">
                   <div 
                     v-for="(option, index) in editItem.customOptions" 
@@ -88,7 +89,7 @@
                   </div>
                 </div>
                 <button class="btn-add-option" @click="addCustomOption">
-                  + 新增自訂選項
+                  + 新增客製化
                 </button>
               </div>
               

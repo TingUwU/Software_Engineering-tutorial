@@ -11,8 +11,9 @@
             </div>
             <ul>
                 <li @click="openUserModal">使用者資訊</li>
-                <router-link to="/order"><li>訂單管理</li></router-link>
-                <router-link to="/store-setting"><li>店家設定</li></router-link>
+                <router-link to="/store-management"><li>菜單設定</li></router-link>
+                <router-link to="/merchant-order"><li>訂單管理</li></router-link>
+                <li @click="goToEditStore">編輯店家資訊</li>
             </ul>
             <div class="sidebar-logout">
                 <button @click="logout">登出</button>
@@ -105,7 +106,7 @@
                         <input type="email" v-model="editCustomer.email">
                     </div>
                     <div class="modal-actions">
-                        <button type="submit" @click="updateUserInfo">儲存</button>
+                        <button type="submit">儲存</button>
                         <button type="button" @click="closeUserModal">關閉</button>
                     </div>
                 </form>
@@ -197,7 +198,7 @@ export default {
 
                 console.log('正在載入店家資料，用戶ID:', userId);
                 
-                const res = await fetch('http://localhost:3000/api/stores');
+                const res = await fetch('http://localhost:8088/api/stores');
                 if (!res.ok) {
                     throw new Error(`HTTP ${res.status}: 無法取得店家列表`);
                 }
@@ -217,18 +218,20 @@ export default {
 
                 this.storeId = myStore.id;
                 this.currentStore = myStore;
+                // 保存當前店家資訊到 localStorage，供其他頁面使用
+                sessionStorage.setItem('currentStore', JSON.stringify(myStore));
                 this.menuItems = myStore.menu || [];
 
                 // 從菜單項目的 tag 提取分類
                 const tags = [...new Set(this.menuItems.map(item => item.tag))];
                 this.categories = tags.filter(tag => tag); // 過濾空值
 
-                console.log('✅ 載入店家成功:', myStore.name);
+                console.log('載入店家成功:', myStore.name);
                 console.log('  - 店家ID:', this.storeId);
                 console.log('  - 菜單項目:', this.menuItems.length, '個');
                 console.log('  - 分類:', this.categories);
             } catch (err) {
-                console.error('❌ 載入店家失敗:', err);
+                console.error(' 載入店家失敗:', err);
                 alert('載入店家失敗: ' + err.message);
             }
         },
@@ -346,7 +349,7 @@ export default {
                 });
                 
                 // 發送到後端
-                const res = await fetch(`http://localhost:3000/api/stores/${this.storeId}/menu`, {
+                const res = await fetch(`http://localhost:8088/api/stores/${this.storeId}/menu`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
@@ -391,7 +394,7 @@ export default {
                 }
 
                 // 發送到後端
-                const res = await fetch(`http://localhost:3000/api/stores/${this.storeId}/menu`, {
+                const res = await fetch(`http://localhost:8088/api/stores/${this.storeId}/menu`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
@@ -436,8 +439,15 @@ export default {
             this.userModalOpen = false;
         },
 
-        async updateUserInfo() {
+        async updateUser() {
             try {
+                // 驗證電子郵件格式
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (this.editCustomer.email && !emailRegex.test(this.editCustomer.email)) {
+                    alert('請輸入有效的電子郵件地址');
+                    return;
+                }
+
                 const userId = this.editCustomer.id;
                 const updates = { ...this.editCustomer };
                 delete updates.id;
@@ -480,10 +490,16 @@ export default {
             }
         },
 
+        goToEditStore() {
+            if (this.storeId) {
+                this.$router.push(`/store-setting/${this.storeId}`);
+            }
+        },
+
         logout() {
             this.$store.dispatch('user/logout');
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
+            sessionStorage.removeItem('token');
+            sessionStorage.removeItem('user');
             this.$router.push('/login');
         }
     }
@@ -840,23 +856,17 @@ export default {
         z-index: 200;
     }
 
-    .user-modal,
-    .category-modal {
+    .user-modal {
         background-color: #fff;
         padding: 20px 30px;
         border-radius: 12px;
-        width: 500px;
-        height: 200px;
+        width: 300px;
         max-width: 90%;
         text-align: left;
         box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
     }
 
-        .user-modal h2,
-        .category-modal h2 {
+        .user-modal h3 {
             color: #0069D9;
             margin-bottom: 15px;
         }
@@ -865,7 +875,6 @@ export default {
         margin-bottom: 10px;
         display: flex;
         flex-direction: column;
-        justify-content: center;
     }
 
         .form-group label {
@@ -877,7 +886,6 @@ export default {
             padding: 6px 8px;
             border-radius: 6px;
             border: 1px solid #ccc;
-
         }
 
     .modal-actions {
