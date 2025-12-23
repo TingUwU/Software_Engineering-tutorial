@@ -28,6 +28,7 @@
                   <input type="text" v-model="editItem.itemName" placeholder="請輸入餐點名稱" />
                 </div>
                 <div class="form-group">
+                  <label class="form-group-label">價格:</label>
                   <input type="number" v-model.number="editItem.price" placeholder="請輸入價格" min="0" />
                 </div>
               </div>
