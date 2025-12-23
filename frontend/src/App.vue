@@ -14,6 +14,7 @@
 </template>
 
 <script>
+import { onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useStore } from 'vuex';
 
@@ -21,6 +22,24 @@ export default {
   setup() {
     const router = useRouter();
     const store = useStore();
+
+    onMounted(() => {
+      const user = localStorage.getItem('user');
+      if (user) {
+        try {
+          const userData = JSON.parse(user);
+          // 恢復用戶登錄狀態
+          store.commit('user/UPDATE_CUSTOMER', userData);
+          store.commit('user/LOGIN');
+          // 設置購物車 userId
+          if (userData.id) {
+            store.dispatch('cart/setUserId', userData.id);
+          }
+        } catch (err) {
+          console.error('恢復用戶狀態失敗:', err);
+        }
+      }
+    });
 
     const goHome = () => {
       const isLoggedIn = store.state.user.isLoggedIn || !!localStorage.getItem('user');

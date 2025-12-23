@@ -61,12 +61,30 @@ public class User {
     public static class FavorItem {
         private String storeId;
         private String itemId;
+        private List<String> customizations; // 客製化選項
+        private Integer quantity; // 商品數量
 
         public FavorItem(){}
 
         public FavorItem(String storeId, String itemId){
             this.storeId = storeId;
             this.itemId = itemId;
+            this.customizations = new ArrayList<>();
+            this.quantity = 1;
+        }
+
+        public FavorItem(String storeId, String itemId, List<String> customizations){
+            this.storeId = storeId;
+            this.itemId = itemId;
+            this.customizations = customizations != null ? customizations : new ArrayList<>();
+            this.quantity = 1;
+        }
+
+        public FavorItem(String storeId, String itemId, List<String> customizations, Integer quantity){
+            this.storeId = storeId;
+            this.itemId = itemId;
+            this.customizations = customizations != null ? customizations : new ArrayList<>();
+            this.quantity = quantity != null ? quantity : 1;
         }
 
         public String getStoreId(){
@@ -81,6 +99,20 @@ public class User {
         }
         public void setItemId(String itemId){
             this.itemId = itemId;
+        }
+
+        public List<String> getCustomizations(){
+            return customizations;
+        }
+        public void setCustomizations(List<String> customizations){
+            this.customizations = customizations != null ? customizations : new ArrayList<>();
+        }
+
+        public Integer getQuantity(){
+            return quantity;
+        }
+        public void setQuantity(Integer quantity){
+            this.quantity = quantity != null ? quantity : 1;
         }
     }
 

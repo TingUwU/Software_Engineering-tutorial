@@ -12,7 +12,7 @@
 
       <ul>
         <router-link to="/nologincart"><li>購物車</li></router-link>
-        <li>訂單管理</li>
+        <router-link to="/nologinorder"><li>訂單管理</li></router-link>
       </ul>
       <!-- 登入按鈕 -->
       <div class="sidebar-login">
@@ -49,14 +49,14 @@
             </div>
 
             <div class="item-quantity">
-              <span>數量</span>
+              <span class="quantity-label">數量</span>
               <div class="quantity-row">
                 <button class="btn-quantity" @click="decreaseQuantity(index)">-</button>
                 <span class="quantity-display">{{ item.quantity }}</span>
                 <button class="btn-quantity" @click="increaseQuantity(index)">+</button>
               </div>
               <div class="subtotal-row">
-                小計：${{ item.itemSubTotal }}
+                <span class="item-subtotal">小計金額：${{ item.itemSubTotal }}</span>
               </div>
             </div>
 
@@ -85,38 +85,46 @@
           <input v-model="remarks" placeholder="請輸入備註" />
         </div>
 
+
         <div class="order-row dining-row">
-          <label><input type="radio" v-model="orderType" value="內用"> 內用</label>
-          <label><input type="radio" v-model="orderType" value="外帶"> 外帶</label>
-
-          <div v-if="orderType==='內用'">
-            桌號 <input v-model="tableNumber" />
+          <div class="dining-option">
+            <label>
+              <input type="radio" v-model="orderType" value="內用" />
+              內用
+            </label>
+            <label>
+              <input type="radio" v-model="orderType" value="外帶" />
+              外帶
+            </label>
           </div>
-          <div v-if="orderType==='外帶'">
-            <div>
-              取餐時間
-              <input type="time" v-model="takeoutTime" />
-            </div>
-
-            <div>
-              手機號碼
+          <div class="time-setting" v-if="orderType==='內用'">
+            <span>桌號:</span>
+            <input type="text" v-model="tableNumber" placeholder="請輸入桌號"/>
+          </div>
+          <div class="time-setting" v-if="orderType==='外帶'">
+            取餐時間: <input type="time" v-model="takeoutTime"/>
+            <span class="phone-setting">
+              手機號碼:
               <input
                 type="tel"
                 v-model="phoneNumber"
                 placeholder="請輸入手機號碼"
               />
-            </div>
+            </span>
           </div>
         </div>
 
+
         <div class="order-row total-row">
-          <div>總金額：${{ cart.totalAmount }}</div>
-          <select v-model="paymentMethod">
-            <option disabled value="">選擇付款方式</option>
-            <option>現金</option>
-            <option>LinePay</option>
-            <option>ApplePay</option>
-          </select>
+          <div class="total-amount">總金額：${{ cart.totalAmount }}</div>
+          <div class="payment-method">
+            支付方式:
+            <select v-model="paymentMethod">
+              <option value="現金">現金</option>
+              <option value="LinePay">LinePay</option>
+              <option value="ApplePay">ApplePay</option>
+            </select>
+          </div>
         </div>
 
         <div class="order-row action-row">
@@ -129,12 +137,17 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useStore } from 'vuex'
 
 const router = useRouter()
 const store = useStore()
+
+// 設置訪客模式
+onMounted(() => {
+  store.dispatch('cart/setGuestMode', true)
+})
 
 const sidebarOpen = ref(false)
 const remarks = ref('')
@@ -167,36 +180,69 @@ const decreaseQuantity = index => {
 const goLogin = () => {
   router.push('/login')
 }
-const checkout = () => {
+const checkout = async () => {
   if (!cart.value.items.length) return alert('購物車是空的')
   if (orderType.value === '內用' && !tableNumber.value) return alert('請輸入桌號')
- if (orderType.value === '外帶') {
-  if (!takeoutTime.value) return alert('請選擇取餐時間')
-  if (!phoneNumber.value) return alert('請輸入手機號碼')
-}
+  if (orderType.value === '外帶') {
+    if (!takeoutTime.value) return alert('請選擇取餐時間')
+    if (!phoneNumber.value) return alert('請輸入手機號碼')
+  }
   if (!paymentMethod.value) return alert('請選擇付款方式')
- 
+
+  // 轉換時間格式：將 "HH:MM" 轉換為當天該時間的 ISO 字符串
+  let takeoutDetailData = null;
+  if (orderType.value === '外帶') {
+    const today = new Date();
+    const [hours, minutes] = takeoutTime.value.split(':');
+    today.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+    takeoutDetailData = { takeoutTime: today.toISOString() };
+  }
+
   const orderData = {
-    storeId: store.state.cart.storeId,
+    storeId: store.state.cart.storeId || 'default-store-id',
     customerId: null,
+    customerPhone: phoneNumber.value || '',
     orderType: orderType.value,
     dineInDetail: orderType.value === '內用'
       ? { tableNumber: tableNumber.value }
       : null,
-    takeoutDetail: orderType.value === '外帶'
-      ? {
-          takeoutTime: takeoutTime.value,
-          phoneNumber: phoneNumber.value
-        }
-      : null,
-    items: cart.value.items,
+    takeoutDetail: takeoutDetailData,
+    items: cart.value.items.map(item => ({
+      menuItemId: item.menuItemId || item.itemId || '',
+      itemName: item.itemName,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice || 0,
+      customization: item.customization || [],
+      itemSubTotal: item.itemSubTotal
+    })),
     totalAmount: cart.value.totalAmount,
     remarks: remarks.value,
     paymentMethod: paymentMethod.value
   }
 
-  console.log('訪客訂單資料:', orderData)
-  alert('訪客訂單資料已準備完成（請看 console）')
+  try {
+    // 使用 Vuex order store 建立訂單
+    const createdOrder = await store.dispatch('order/createOrder', orderData)
+
+    // 檢查訂單是否成功建立
+    if (!createdOrder || !createdOrder.id) {
+      throw new Error('訂單建立失敗，伺服器未返回訂單資料')
+    }
+
+    // 清空購物車
+    await store.dispatch('cart/clearCart')
+
+    // 保存訂單到 localStorage（訪客模式）
+    localStorage.setItem('guestOrder', JSON.stringify(createdOrder))
+
+    alert('訂單已成功送出！訂單編號：' + createdOrder.id)
+
+    // 跳轉到訪客訂單頁面
+    router.push('/nologinorder')
+  } catch (err) {
+    console.error('訂單建立失敗:', err)
+    alert('訂單建立失敗，請稍後再試: ' + err.message)
+  }
 }
 </script>
 
@@ -301,21 +347,119 @@ const checkout = () => {
 .preview-avatar { width:80px; height:80px; border-radius:50%; object-fit:cover; margin-bottom:8px; }
 
 /* Order section */
-.top-row { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:25px; gap:30px; }
-.notes-section { flex:1; }
-.notes-section input { width:100%; padding:12px; border:2px solid #0069D9; border-radius:8px; }
-.total-amount { font-size:24px; font-weight:bold; color:#0069D9; }
-.bottom-row { display:flex; justify-content:space-between; align-items:flex-start; gap:30px; }
-.dining-options { display:flex; flex-direction:column; gap:15px; align-items:flex-start; }
-.dining-option-row { display:flex; align-items:center; gap:15px; }
-.radio-item { display:flex; align-items:center; cursor:pointer; }
-.radio-item input { margin-right:10px; width:20px; height:20px; cursor:pointer; accent-color:#0069D9; }
-.radio-item span { font-size:18px; color:#333; }
-.btn-option { padding:12px 24px; background:#0069D9; border:2px solid #0069D9; color:#fff; border-radius:8px; cursor:pointer; font-weight:600; display:flex; align-items:center; justify-content:center; }
-.btn-option:hover { background:#0056b3; border-color:#0056b3; }
-.btn-option.highlight { background:#0069D9; border-color:#0069D9; color:#fff; }
-.btn-checkout { padding:12px 30px; background:#0069D9; border:2px solid #0069D9; color:#fff; border-radius:8px; cursor:pointer; font-size:18px; font-weight:600; }
-.btn-checkout:hover { background:#0056b3; border-color:#0056b3; }
+.order-section {
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.order-row {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.notes-row input {
+  flex: 1;
+  padding: 10px;
+  border: 2px solid #0069D9;
+  border-radius: 8px;
+}
+
+.dining-row .dining-option label {
+  margin-right: 15px;
+  font-size: 16px;
+}
+
+.time-setting {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.time-setting input {
+  padding: 6px 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  width: 120px;
+}
+
+.phone-setting {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.phone-setting input {
+  padding: 6px 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  width: 150px;
+}
+
+.total-row {
+  justify-content: space-between;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.total-amount {
+  font-size: 24px;
+  font-weight: bold;
+  color: #0069D9;
+}
+
+.payment-method select {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+.action-row {
+  display: flex;
+  gap: 10px;
+}
+
+.action-row button {
+  flex: 1;
+  padding: 12px;
+  font-size: 16px;
+  font-weight: bold;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.btn-back {
+  background: #ccc;
+  color: #333;
+  border: none;
+}
+
+.btn-checkout {
+  background: #0069D9;
+  color: #fff;
+  border: none;
+}
+.quantity-row input[type=number]::-webkit-outer-spin-button,
+.quantity-row input[type=number]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.quantity-row input[type=number] {
+  -webkit-appearance: none;
+  -moz-appearance: textfield; /* Firefox */
+  appearance: none;
+  text-align: center;
+  width: 50px;
+  border: 2px solid #0069D9;
+  border-radius: 6px;
+  padding: 6px;
+}
 
 .empty-cart { text-align:center; padding:40px; font-size:18px; color:#999; }
 .modal-overlay {
@@ -386,90 +530,5 @@ const checkout = () => {
                 background-color: #ccc;
                 color: #333;
             }
-            .order-section {
-  background: #fff;
-  border-radius: 12px;
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-}
-
-.order-row {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-}
-
-.notes-row input {
-  flex: 1;
-  padding: 10px;
-  border: 2px solid #0069D9;
-  border-radius: 8px;
-}
-
-.dining-row .dining-option label {
-  margin-right: 15px;
-  font-size: 16px;
-}
-
-.time-setting input {
-  padding: 6px 10px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-}
-
-.total-row {
-  justify-content: space-between;
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.payment-method select {
-  padding: 6px 10px;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-}
-
-.action-row {
-  display: flex;
-  gap: 10px;
-}
-
-.action-row button {
-  flex: 1;
-  padding: 12px;
-  font-size: 16px;
-  font-weight: bold;
-  border-radius: 8px;
-  cursor: pointer;
-}
-
-.btn-back {
-  background: #ccc;
-  color: #333;
-  border: none;
-}
-
-.btn-checkout {
-  background: #0069D9;
-  color: #fff;
-  border: none;
-}
-.quantity-row input[type=number]::-webkit-outer-spin-button,
-.quantity-row input[type=number]::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-
-.quantity-row input[type=number] {
-  -moz-appearance: textfield; /* Firefox */
-  text-align: center;
-  width: 50px;
-  border: 2px solid #0069D9;
-  border-radius: 6px;
-  padding: 6px;
-}
 </style>
 

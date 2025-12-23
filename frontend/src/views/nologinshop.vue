@@ -1,5 +1,27 @@
 <template>
   <div class="shop">
+    <!-- 加載狀態 -->
+    <div v-if="loading" class="loading-container">
+      <div class="loading-spinner"></div>
+      <p>載入中...</p>
+    </div>
+
+    <!-- 錯誤狀態 -->
+    <div v-else-if="!shop" class="error-container">
+      <p>找不到該店家</p>
+      <button @click="$router.push('/')">返回首頁</button>
+    </div>
+
+    <!-- 主要內容 -->
+    <div v-else>
+      <div
+        class="shop-hero"
+        :style="{
+          backgroundImage: `url(${shop.coverImage || require('@/assets/logo.png')})`
+        }"
+      >
+  <div class="shop-hero-overlay"></div>
+</div>
     <!-- 遮罩層 -->
     <div v-show="sidebarOpen" class="overlay" @click="toggleSidebar"></div>
 
@@ -11,7 +33,7 @@
       </div>
       <ul>
         <router-link to="/nologincart"><li>購物車</li></router-link>
-        <li @click="needLogin">訂單管理</li>
+        <router-link to="/nologinorder"><li>訂單管理</li></router-link>
       </ul>
       <!-- 登入按鈕 -->
       <div class="sidebar-login">
@@ -109,6 +131,7 @@
       @close="closeMenuItem"
       @add-to-cart="handleAddToCart"
     />
+    </div>
   </div>
 </template>
 
@@ -124,18 +147,23 @@ export default {
       menuItemModalOpen: false,
       keyword: '',
       shop: null,
+      loading: true, // 加載狀態
       selectedProduct: {},
       categoryRefs: {}
     }
   },
 
-  created() {
-    this.loadShop()
+  async created() {
+    // 設置訪客模式
+    this.$store.dispatch('cart/setGuestMode', true)
+    await this.loadShop()
   },
 
   watch: {
-    '$route.params.id'() {
-      this.loadShop()
+    '$route.params.id': async function(newId) {
+      if (newId) {
+        await this.loadShop()
+      }
     }
   },
 
@@ -175,14 +203,31 @@ export default {
 
         this.openMenuItem(item); // 直接開啟 MenuItem Modal
     },
-    loadShop() {
-      const shopId = this.$route.params.id
-      const shop = this.$store.getters['shops/getShopById'](shopId)
-      if (!shop) {
-        alert('找不到店家')
-        this.$router.push('/')
+    async loadShop() {
+      this.loading = true;
+      const shopId = this.$route.params.id;
+
+      try {
+        // 首先嘗試從 store 中獲取
+        let shop = this.$store.getters['shops/getShopById'](shopId);
+
+        if (!shop) {
+          // 如果 store 中沒有，嘗試從 API 獲取
+          console.log('Store 中找不到店家，嘗試從 API 獲取:', shopId);
+          shop = await this.$store.dispatch('shops/fetchShopById', shopId);
+
+          // 同時獲取所有店家列表，確保其他頁面能正常工作
+          await this.$store.dispatch('shops/fetchAllShops');
+        }
+
+        this.shop = shop;
+        console.log('成功載入店家:', shop.name);
+      } catch (error) {
+        console.error('獲取店家失敗:', error);
+        this.shop = null; // 確保 shop 為 null，觸發錯誤顯示
+      } finally {
+        this.loading = false; // 結束加載
       }
-      this.shop = shop
     },
 
     toggleSidebar() {
@@ -213,7 +258,7 @@ export default {
 
     handleAddToCart(item) {
       this.$store.dispatch('cart/setStoreId', this.shop.id)
-      this.$store.dispatch('cart/addItem', item)
+      this.$store.dispatch('cart/addItem', { item, storeId: this.shop.id })
     },
     goLogin() {
       this.sidebarOpen = false; // 點擊後關閉側邊欄
@@ -644,4 +689,70 @@ export default {
       .search-suggestions li:hover {
           background-color: #f2f6ff;
       }
+      .shop-hero {
+    position: relative;
+    width: 100%;
+    height: 180px;                 /* 高度可自行調整 */
+    background-image: url('@/assets/logo.png'); /* 預設圖 */
+    background-size: cover;
+    background-position: center;
+    border-radius: 0 0 16px 16px;
+    margin-bottom: 20px;
+}
+
+/* 半透明遮罩（關鍵） */
+.shop-hero-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.65); /* 白色半透明 */
+    backdrop-filter: blur(2px);            /* 可要可不要 */
+}
+
+/* 加載和錯誤狀態 */
+.loading-container, .error-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    padding: 40px;
+    text-align: center;
+}
+
+.loading-spinner {
+    width: 50px;
+    height: 50px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #0069D9;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 20px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.loading-container p, .error-container p {
+    font-size: 18px;
+    color: #666;
+    margin-bottom: 20px;
+}
+
+.error-container button {
+    padding: 10px 20px;
+    background-color: #0069D9;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s;
+}
+
+.error-container button:hover {
+    background-color: #0056b3;
+}
+
 </style>

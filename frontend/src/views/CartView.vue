@@ -10,6 +10,7 @@
         <span class="username">{{ customer.nickname || '訪客' }}, 肚子餓了嗎</span>
       </div>
       <ul>
+        <router-link to="/home"><li>首頁</li></router-link>
         <li @click="openUserModal">使用者資訊</li>
         <router-link to="/cart"><li>購物車</li></router-link>
         <router-link to="/order"><li>訂單管理</li></router-link>
@@ -153,7 +154,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed,onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useStore } from 'vuex'
 
@@ -179,6 +180,18 @@ const cart = computed(() => ({
 
 const customer = computed(() => store.getters['user/customer'] || {})
 
+onMounted(async () => {
+  const userId = customer.value.id
+  if (userId) {
+    try {
+      await store.dispatch('cart/setUserId', userId)
+      await store.dispatch('cart/fetchCart')
+    } catch (err) {
+      console.error('加載購物車失敗:', err)
+    }
+  }
+})
+
 // Methods
 const toggleSidebar = () => (sidebarOpen.value = !sidebarOpen.value)
 const openUserModal = () => { editCustomer.value = { ...customer.value }; userModalOpen.value = true }
@@ -202,14 +215,77 @@ const logout = () => {
 
 const goBack = () => router.back()
 
-const deleteItem = (index) => store.dispatch('cart/removeItem', index)
-const increaseQuantity = (index) => store.dispatch('cart/updateItemQuantity', {
-  index,
-  quantity: (store.state.cart.items[index]?.quantity || 0) + 1
-})
-const decreaseQuantity = (index) => {
-  const qty = store.state.cart.items[index]?.quantity || 1
-  if (qty > 1) store.dispatch('cart/updateItemQuantity', { index, quantity: qty - 1 })
+const deleteItem = async (index) => {
+  const item = store.state.cart.items[index]
+  if (!item) return
+  
+  try {
+    await store.dispatch('cart/removeItem', item.menuItemId || item.itemId)
+  } catch (err) {
+    alert('刪除失敗: ' + err.message)
+  }
+}
+
+const increaseQuantity = async (index) => {
+  const item = store.state.cart.items[index]
+  if (!item) return
+  
+  try {
+    await store.dispatch('cart/updateItemQuantity', {
+      index,
+      quantity: item.quantity + 1
+    })
+  } catch (err) {
+    console.error('更新數量失敗:', err)
+    
+    // 如果是數據異常，提供清空購物車的選項
+    if (err.message && err.message.includes('數據異常')) {
+      const confirmed = confirm(
+        '購物車數據異常（店家資訊遺失）\n' +
+        '是否清空購物車並重新開始？\n\n' +
+        '點擊「確定」清空購物車\n' +
+        '點擊「取消」保留當前狀態'
+      )
+      
+      if (confirmed) {
+        await store.dispatch('cart/clearCart')
+        alert('購物車已清空，請重新添加商品')
+      }
+    } else {
+      alert('更新數量失敗: ' + err.message)
+    }
+  }
+}
+
+const decreaseQuantity = async (index) => {
+  const item = store.state.cart.items[index]
+  if (!item || item.quantity <= 1) return
+  
+  try {
+    await store.dispatch('cart/updateItemQuantity', {
+      index,
+      quantity: item.quantity - 1
+    })
+  } catch (err) {
+    console.error('更新數量失敗:', err)
+    
+    // 如果是數據異常，提供清空購物車的選項
+    if (err.message && err.message.includes('數據異常')) {
+      const confirmed = confirm(
+        '購物車數據異常（店家資訊遺失）\n' +
+        '是否清空購物車並重新開始？\n\n' +
+        '點擊「確定」清空購物車\n' +
+        '點擊「取消」保留當前狀態'
+      )
+      
+      if (confirmed) {
+        await store.dispatch('cart/clearCart')
+        alert('購物車已清空，請重新添加商品')
+      }
+    } else {
+      alert('更新數量失敗: ' + err.message)
+    }
+  }
 }
 
 
@@ -217,6 +293,13 @@ const decreaseQuantity = (index) => {
 
 const updateUserInfo = async () => {
   try {
+    // 驗證電子郵件格式
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (editCustomer.value.email && !emailRegex.test(editCustomer.value.email)) {
+      alert('請輸入有效的電子郵件地址')
+      return
+    }
+
     const userId = editCustomer.value.id
     const updates = { ...editCustomer.value }
     delete updates.id
@@ -232,7 +315,6 @@ const updateUserInfo = async () => {
 const checkout = async () => {
   if (!cart.value.items.length) return alert('購物車是空的')
 
-  // 驗證必填欄位
   if (orderType.value === '內用' && (!tableNumber.value || tableNumber.value.trim() === '')) {
     return alert('請填寫桌號')
   } else if (orderType.value === '外帶' && (!takeoutTime.value || takeoutTime.value.trim() === '')) {
@@ -243,13 +325,22 @@ const checkout = async () => {
     return alert('請選擇付款方式')
   }
 
+  // 轉換時間格式：將 "HH:MM" 轉換為當天該時間的 ISO 字符串
+  let takeoutDetailData = null;
+  if (orderType.value === '外帶') {
+    const today = new Date();
+    const [hours, minutes] = takeoutTime.value.split(':');
+    today.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+    takeoutDetailData = { takeoutTime: today.toISOString() };
+  }
+
   const orderData = {
     storeId: store.state.cart.storeId,
     customerId: customer.value.id || null,
     customerPhone: customerPhone.value || '',
     orderType: orderType.value,
     dineInDetail: orderType.value === '內用' ? { tableNumber: tableNumber.value } : null,
-    takeoutDetail: orderType.value === '外帶' ? { takeoutTime: takeoutTime.value } : null,
+    takeoutDetail: takeoutDetailData,
     items: cart.value.items.map(item => ({
       menuItemId: item.menuItemId,
       itemName: item.itemName,
@@ -267,13 +358,17 @@ const checkout = async () => {
     // 使用 Vuex order store 建立訂單
     const createdOrder = await store.dispatch('order/createOrder', orderData)
 
-    // 清空購物車
-    store.dispatch('cart/clearCart')
+    // 檢查訂單是否成功建立
+    if (!createdOrder || !createdOrder.id) {
+      throw new Error('訂單建立失敗，伺服器未返回訂單資料')
+    }
+
+    await store.dispatch('cart/clearCart')
 
     // 跳轉到訂單頁面，帶參數 orderId
     router.push({ name: 'OrderView', query: { orderId: createdOrder.id } })
   } catch (err) {
-    console.error(err)
+    console.error('訂單建立錯誤:', err)
     alert('訂單建立失敗，請稍後再試: ' + err.message)
   }
 }
@@ -354,7 +449,16 @@ const checkout = async () => {
 .sidebar li { color:#fff; cursor:pointer; padding:10px 0; border-radius:4px; text-align: left;}
 .sidebar li:hover { background:#001633; }
 .sidebar-logout { margin-top:auto; }
-.sidebar-logout button { width:100%; padding:10px 0; background:#fff; color:black; border:none; border-radius:6px; cursor:pointer; }
+.sidebar-logout button {
+    width: 100%;
+    padding: 10px 0;
+    background-color: #fff;
+    color: black;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
+}
 .sidebar-logout button:hover { background:#0069D9; color:#fff; }
 .avatar { position: fixed; top:20px; left:20px; width:50px; height:50px; border-radius:50%; cursor:pointer; z-index:101; }
 .preview-avatar { width:80px; height:80px; border-radius:50%; object-fit:cover; margin-bottom:8px; }

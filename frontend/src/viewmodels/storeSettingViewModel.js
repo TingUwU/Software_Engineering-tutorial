@@ -3,6 +3,8 @@ import { createEmptyStore, defaultBusinessHour } from '../models/store.model.js'
 
 export default function useStoreSettingViewModel() {
   const store = reactive(createEmptyStore());
+  const isEditMode = ref(false);
+  const storeId = ref(null);
 
   // 經緯度輸入（分開輸入、同步回陣列）
   const lng = ref(0);
@@ -18,9 +20,11 @@ export default function useStoreSettingViewModel() {
   function validate() {
     const errs = [];
     if (!store.name?.trim()) errs.push('店家名稱為必填');
+    if (!store.category?.trim()) errs.push('店家種類為必填');
     if (!store.address?.trim()) errs.push('店家地址為必填');
     const [L, A] = store.coordinates || [];
     if (!Number.isFinite(L) || !Number.isFinite(A)) errs.push('經緯度需為數值');
+    if (!store.ownerId?.trim()) errs.push('店主ID缺失（請重新登入）');
     return errs;
   }
 
@@ -38,50 +42,154 @@ export default function useStoreSettingViewModel() {
     validationErrors.value = [];
   }
 
+  async function loadStore(id) {
+    // 清空之前的錯誤
+    validationErrors.value = [];
+    try {
+      const res = await fetch(`http://localhost:8088/api/stores/${id}`);
+      if (!res.ok) {
+        let errorMessage = `HTTP ${res.status}: `;
+        try {
+          const errorText = await res.text();
+          if (errorText === 'STORE_NOT_FOUND' || res.status === 404) {
+            errorMessage += '找不到該店家';
+          } else {
+            errorMessage += errorText || '載入店家資料失敗';
+          }
+        } catch {
+          errorMessage += '載入店家資料失敗';
+        }
+        throw new Error(errorMessage);
+      }
+      const data = await res.json();
+      
+      // 將後端資料設回 store
+      Object.assign(store, data);
+      
+      // 修正 businessHours 數據格式（處理舊數據中的 close 字段）
+      if (data.businessHours && Array.isArray(data.businessHours)) {
+        store.businessHours = data.businessHours.map(bh => ({
+          day: bh.day || '',
+          start: bh.start || '',
+          end: bh.end || bh.close || '',  // 兼容舊數據的 close 字段
+          note: bh.note || ''
+        }));
+      }
+      
+      // 設定經緯度
+      if (data.coordinates && data.coordinates.length === 2) {
+        lng.value = data.coordinates[0];
+        lat.value = data.coordinates[1];
+      }
+      
+      // 設定為編輯模式
+      isEditMode.value = true;
+      storeId.value = id;
+      
+      console.log('成功載入店家資料:', data);
+      return true;
+    } catch (err) {
+      console.error('載入店家失敗:', err);
+      // 處理網絡錯誤
+      if (err.message.includes('Failed to fetch') || err.name === 'TypeError') {
+        validationErrors.value.push('網絡連接失敗，請檢查後端服務是否啟動');
+      } else {
+        validationErrors.value.push(err.message);
+      }
+      return false;
+    }
+  }
+
   async function submitForm() {
     validationErrors.value = validate();
     if (validationErrors.value.length) return false;
 
     store.updatedAt = new Date();
 
-    // TODO: 呼叫後端 API 建立或更新店家設定
-    // 範例：
-    // const res = await fetch('/api/stores', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({
-    //     ...store,
-    //     updatedAt: new Date().toISOString(),
-    //   }),
-    // });
-    // const data = await res.json();
+    try {
+      const url = isEditMode.value
+        ? `http://localhost:8088/api/stores/${storeId.value}`
+        : 'http://localhost:8088/api/stores';
 
-    // 模擬：先以 console 代替
-    console.log('[TODO] 送往後端的資料:', {
-      ...store,
-      updatedAt: store.updatedAt.toISOString(),
-    });
+      const method = isEditMode.value ? 'PUT' : 'POST';
 
-    return true;
+      // 準備要發送的數據，只包含應該更新的字段
+      const dataToSend = {
+        name: store.name,
+        description: store.description,
+        phone: store.phone,
+        email: store.email,
+        address: store.address,
+        category: store.category,
+        coordinates: store.coordinates,
+        businessHours: store.businessHours,
+        isActive: store.isActive,
+        updatedAt: store.updatedAt.toISOString(),
+      };
+
+      // 如果是編輯模式，不要發送 ownerId（因為它已經在路徑中驗證）
+      // 如果是創建模式，才發送 ownerId
+      if (!isEditMode.value) {
+        dataToSend.ownerId = store.ownerId;
+      }
+
+      // 獲取當前用戶ID用於認證
+      const currentUserId = store.ownerId; // 這個值在 StoreSetting.vue 的 onMounted 中設置
+
+      const res = await fetch(url, {
+        method: method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${currentUserId}`
+        },
+        body: JSON.stringify(dataToSend),
+      });
+
+      if (!res.ok) {
+        let errorMessage = `HTTP ${res.status}: `;
+        try {
+          const errorText = await res.text();
+          // 處理後端返回的特定錯誤
+          if (errorText === 'FORBIDDEN') {
+            errorMessage += '沒有權限操作此店家';
+          } else if (errorText === 'STORE_NOT_FOUND') {
+            errorMessage += '找不到該店家';
+          } else {
+            errorMessage += errorText || (isEditMode.value ? '更新店家失敗' : '建立店家失敗');
+          }
+        } catch {
+          errorMessage += isEditMode.value ? '更新店家失敗' : '建立店家失敗';
+        }
+        throw new Error(errorMessage);
+      }
+
+      const data = await res.json();
+      console.log(isEditMode.value ? '店家更新成功:' : '店家建立成功:', data);
+      
+      return true;
+    } catch (err) {
+      console.error(isEditMode.value ? '更新店家失敗:' : '建立店家失敗:', err);
+      // 處理網絡錯誤
+      if (err.message.includes('Failed to fetch') || err.name === 'TypeError') {
+        validationErrors.value.push('網絡連接失敗，請檢查後端服務是否啟動');
+      } else {
+        validationErrors.value.push(err.message);
+      }
+      return false;
+    }
   }
-
-  // TODO: 若為編輯頁，可於此加入載入既有店家資料的動作（例如根據路由參數取得 _id）
-  // 例：
-  // async function loadStore(id) {
-  //   const res = await fetch(`/api/stores/${id}`);
-  //   const data = await res.json();
-  //   // 將後端資料設回 store
-  // }
 
   return {
     store,
     lng,
     lat,
     validationErrors,
+    isEditMode,
+    storeId,
     addBusinessHour,
     removeBusinessHour,
     resetForm,
     submitForm,
-    // loadStore, // 需要時再暴露
+    loadStore,
   };
 }

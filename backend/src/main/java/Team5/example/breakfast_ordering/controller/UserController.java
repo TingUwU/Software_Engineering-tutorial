@@ -6,6 +6,7 @@ import jakarta.validation.Valid;
 
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Map;
 
 import Team5.example.breakfast_ordering.model.User;
 import Team5.example.breakfast_ordering.model.User.FavorItem;
@@ -186,7 +187,7 @@ public class UserController {
         return user.getFavorItems() != null ? user.getFavorItems() : new ArrayList<FavorItem>();
     }
 
-    // 新增自訂義組合（內容為空，只有 combo 名稱）
+   
     @PostMapping("/{userId}/custom-combos")
     public User addCustomCombo(@PathVariable String userId, @RequestBody CustomCombo comboRequest){
         User user = userRepository.findById(userId)
@@ -252,7 +253,8 @@ public class UserController {
     // 將商品加入自訂義組合 (要檢查是否為同一店家)
     @PostMapping("/{userId}/custom-combos/{comboId}/items/{storeId}/{itemId}")
     public User addCustomComboItem(@PathVariable String userId, @PathVariable String comboId,
-                                   @PathVariable String storeId, @PathVariable String itemId
+                                   @PathVariable String storeId, @PathVariable String itemId,
+                                   @RequestBody(required = false) Map<String, Object> requestBody
     ){
         User user = userRepository.findById(userId)
         .orElseThrow(() -> new RuntimeException("帳號不存在"));
@@ -271,14 +273,94 @@ public class UserController {
             }
         }
 
-        boolean exists = targetCombo.getItems().stream()
-                         .anyMatch(item -> item.getItemId().equals(itemId));
+        // 處理客製化選項
+        List<String> customizations = new ArrayList<>();
+        Integer quantity = 1;
 
-        if(exists){
-            throw new RuntimeException("該商品已在組合中");
+        if (requestBody != null) {
+            if (requestBody.containsKey("customizations")) {
+                @SuppressWarnings("unchecked")
+                List<String> customList = (List<String>) requestBody.get("customizations");
+                customizations = customList != null ? customList : new ArrayList<>();
+            }
+            if (requestBody.containsKey("quantity")) {
+                quantity = (Integer) requestBody.get("quantity");
+            }
         }
 
-        targetCombo.getItems().add(new FavorItem(storeId, itemId));
+        // 檢查是否已經存在相同客製化的商品（不考慮順序）
+        final List<String> targetCustomizations = customizations; // 創建 effectively final 的副本
+        boolean exists = targetCombo.getItems().stream()
+                         .anyMatch(item -> {
+                             if (!item.getItemId().equals(itemId)) {
+                                 return false;
+                             }
+                             // 比較客製化選項，忽略順序
+                             List<String> existingCustoms = item.getCustomizations();
+                             if (existingCustoms.size() != targetCustomizations.size()) {
+                                 return false;
+                             }
+                             return existingCustoms.containsAll(targetCustomizations) && targetCustomizations.containsAll(existingCustoms);
+                         });
+
+        if(exists){
+            throw new RuntimeException("相同客製化的商品已在組合中");
+        }
+
+        targetCombo.getItems().add(new FavorItem(storeId, itemId, customizations, quantity));
+
+        return userRepository.save(user);
+    }
+
+    // 更新自訂義組合中的商品 (數量和客製化選項)
+    @PatchMapping("/{userId}/custom-combos/{comboId}/items/{storeId}/{itemId}")
+    public User updateCustomComboItem(@PathVariable String userId, @PathVariable String comboId,
+                                      @PathVariable String storeId, @PathVariable String itemId,
+                                      @RequestBody Map<String, Object> updateData) {
+        User user = userRepository.findById(userId)
+        .orElseThrow(() -> new RuntimeException("帳號不存在"));
+
+        CustomCombo targetCombo = user.getCustomCombos().stream()
+                                  .filter(combo -> combo.getComboId().equals(comboId))
+                                  .findFirst()
+                                  .orElseThrow(() -> new RuntimeException("找不到該 combo"));
+
+        // 需要原始客製化信息來識別具體的商品實例
+        @SuppressWarnings("unchecked")
+        List<String> originalCustomizations = (List<String>) updateData.get("originalCustomizations");
+
+        if (originalCustomizations == null) {
+            throw new RuntimeException("需要提供原始客製化信息來識別商品");
+        }
+
+        final List<String> targetOriginalCustomizations = originalCustomizations; // 創建 effectively final 的副本
+        FavorItem targetItem = targetCombo.getItems().stream()
+                              .filter(item -> {
+                                  if (!item.getStoreId().equals(storeId) || !item.getItemId().equals(itemId)) {
+                                      return false;
+                                  }
+                                  // 比較客製化選項，忽略順序
+                                  List<String> existingCustoms = item.getCustomizations();
+                                  if (existingCustoms.size() != targetOriginalCustomizations.size()) {
+                                      return false;
+                                  }
+                                  return existingCustoms.containsAll(targetOriginalCustomizations) && targetOriginalCustomizations.containsAll(existingCustoms);
+                              })
+                              .findFirst()
+                              .orElseThrow(() -> new RuntimeException("找不到該商品"));
+
+        // 更新數量
+        if (updateData.containsKey("quantity")) {
+            Integer newQuantity = (Integer) updateData.get("quantity");
+            targetItem.setQuantity(newQuantity != null ? newQuantity : 1);
+        }
+
+        // 更新客製化選項
+        if (updateData.containsKey("customizations")) {
+            @SuppressWarnings("unchecked")
+            List<String> newCustomizations = (List<String>) updateData.get("customizations");
+            targetItem.setCustomizations(newCustomizations != null ? newCustomizations : new ArrayList<>());
+        }
 
         return userRepository.save(user);
     }
@@ -286,7 +368,8 @@ public class UserController {
     // 將商品移除自訂義組合
     @DeleteMapping("/{userId}/custom-combos/{comboId}/items/{storeId}/{itemId}")
     public User deleteCustomComboItem(@PathVariable String userId, @PathVariable String comboId,
-                                   @PathVariable String storeId, @PathVariable String itemId
+                                   @PathVariable String storeId, @PathVariable String itemId,
+                                   @RequestBody(required = false) Map<String, Object> deleteData
     ){
         User user = userRepository.findById(userId)
         .orElseThrow(() -> new RuntimeException("帳號不存在"));
@@ -300,8 +383,29 @@ public class UserController {
                                   .findFirst()
                                   .orElseThrow(() -> new RuntimeException("找不到該 combo"));
 
-        boolean isRemoved = targetCombo.getItems()
-                            .removeIf(item -> item.getItemId().equals(itemId));
+        boolean isRemoved;
+
+        // 如果提供了客製化信息，則用來識別具體的商品實例
+        if (deleteData != null && deleteData.containsKey("customizations")) {
+            @SuppressWarnings("unchecked")
+            final List<String> targetCustomizations = (List<String>) deleteData.get("customizations"); // 創建 effectively final 的副本
+
+            isRemoved = targetCombo.getItems().removeIf(item -> {
+                if (!item.getStoreId().equals(storeId) || !item.getItemId().equals(itemId)) {
+                    return false;
+                }
+                // 比較客製化選項，忽略順序
+                List<String> existingCustoms = item.getCustomizations();
+                if (existingCustoms.size() != targetCustomizations.size()) {
+                    return false;
+                }
+                return existingCustoms.containsAll(targetCustomizations) && targetCustomizations.containsAll(existingCustoms);
+            });
+        } else {
+            // 如果沒有提供客製化信息，刪除第一個匹配的商品（向後兼容）
+            isRemoved = targetCombo.getItems()
+                        .removeIf(item -> item.getStoreId().equals(storeId) && item.getItemId().equals(itemId));
+        }
 
         if(!isRemoved){
             throw new RuntimeException("移除失敗， combo 中找不到該商品");

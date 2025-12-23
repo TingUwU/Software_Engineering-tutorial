@@ -12,7 +12,7 @@
 
             <ul>
                 <router-link to="/nologincart"><li>購物車</li></router-link>
-                <li>訂單管理</li>
+                <router-link to="/nologinorder"><li>訂單管理</li></router-link>
             </ul>
             <!-- 登入按鈕 -->
             <div class="sidebar-login">
@@ -33,35 +33,43 @@
             <h1 class="logo">店家一覽</h1>
         </header>
 
-        <!-- 搜尋 -->
-        <div class="search-section">
-            <input
-                type="text"
-                class="search-bar"
-                placeholder="搜尋餐廳…"
-                v-model="keyword"
-            >
-            <button class="search-btn">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
-                     fill="none" stroke="white" stroke-width="2"
-                     stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="11" cy="11" r="8"/>
-                    <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-                </svg>
-            </button>
-            <ul
-                v-if="searchSuggestions.length"
-                class="search-suggestions"
-            >
-                <li
-                v-for="shop in searchSuggestions"
-                :key="shop.id"
-                @click="selectSuggestion(shop)"
-                >
-                {{ shop.name }}
-                </li>
-            </ul>
+        <!-- 加載狀態 -->
+        <div v-if="loading" class="loading-container">
+            <div class="loading-spinner"></div>
+            <p>載入中...</p>
         </div>
+
+        <!-- 主要內容 -->
+        <div v-else>
+            <!-- 搜尋 -->
+            <div class="search-section">
+                <input
+                    type="text"
+                    class="search-bar"
+                    placeholder="搜尋餐廳…"
+                    v-model="keyword"
+                >
+                <button class="search-btn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                         fill="none" stroke="white" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"/>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    </svg>
+                </button>
+                <ul
+                    v-if="searchSuggestions.length"
+                    class="search-suggestions"
+                >
+                    <li
+                        v-for="shop in searchSuggestions"
+                        :key="shop.id"
+                        @click="selectSuggestion(shop)"
+                    >
+                        {{ shop.name }}
+                    </li>
+                </ul>
+            </div>
 
         <!-- 中式店家 -->
         <section class="category-section">
@@ -111,17 +119,18 @@
             </div>
         </section>
 
-        <!-- 右下角購物車 -->
-        <router-link to="/nologincart" class="cart-btn">
-            <svg xmlns="http://www.w3.org/2000/svg"
-                 fill="none" stroke="white" stroke-width="2"
-                 stroke-linecap="round" stroke-linejoin="round"
-                 width="24" height="24">
-                <circle cx="9" cy="21" r="1"/>
-                <circle cx="20" cy="21" r="1"/>
-                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
-            </svg>
-        </router-link>
+            <!-- 右下角購物車 -->
+            <router-link to="/nologincart" class="cart-btn">
+                <svg xmlns="http://www.w3.org/2000/svg"
+                     fill="none" stroke="white" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round"
+                     width="24" height="24">
+                    <circle cx="9" cy="21" r="1"/>
+                    <circle cx="20" cy="21" r="1"/>
+                    <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+                </svg>
+            </router-link>
+        </div>
     </div>
 </template>
 
@@ -130,8 +139,20 @@ export default {
     data() {
         return {
             sidebarOpen: false,
-            keyword: ""
+            keyword: "",
+            loading: true
         };
+    },
+    async created() {
+        // 載入所有店家數據
+        try {
+            await this.$store.dispatch('shops/fetchAllShops')
+        } catch (err) {
+            console.error('載入店家失敗:', err)
+            alert('載入店家失敗，請稍後再試')
+        } finally {
+            this.loading = false
+        }
     },
     computed: {
         searchSuggestions() {
@@ -147,18 +168,16 @@ export default {
       },
 
       chineseShops() {
-        const ids = ['store001', 'store002', 'c1', 'c2'];
         return this.allShops.filter(shop =>
-          ids.includes(shop.id) &&
-          shop.name.includes(this.keyword)
+          (shop.category === '中式' || shop.category === 'chinese') &&
+          shop.name.toLowerCase().includes(this.keyword.toLowerCase())
         );
       },
 
       westernShops() {
-        const ids = ['store003', 'store004', 'w1', 'w2'];
         return this.allShops.filter(shop =>
-          ids.includes(shop.id) &&
-          shop.name.includes(this.keyword)
+          (shop.category === '西式' || shop.category === 'western') &&
+          shop.name.toLowerCase().includes(this.keyword.toLowerCase())
         );
       }
     },
@@ -597,6 +616,37 @@ export default {
       .search-suggestions li:hover {
           background-color: #f2f6ff;
       }
+
+/* 加載狀態 */
+.loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    padding: 40px;
+    text-align: center;
+}
+
+.loading-spinner {
+    width: 50px;
+    height: 50px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #0069D9;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 20px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.loading-container p {
+    font-size: 18px;
+    color: #666;
+}
 
 </style>
 

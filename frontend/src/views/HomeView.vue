@@ -10,6 +10,7 @@
                 <span class="username">{{ customer.nickname }}, 肚子餓了嗎</span>
             </div>
             <ul>
+                <router-link to="/home"><li>首頁</li></router-link>
                 <li @click="openUserModal">使用者資訊</li>
                 <router-link to="/cart"><li>購物車</li></router-link>
                 <router-link to="/order"><li>訂單管理</li></router-link>
@@ -69,7 +70,7 @@
                                  :key="shop.id"
                                  :to="{ name: 'ShopView', params: { id: shop.id } }"
                                  class="shop-card">
-                        <img :src="shop.menu[0]?.imgUrl || require('@/assets/logo.png')" class="shop-img" alt="店家圖片">
+                        <img :src="shop.menu?.[0]?.imgUrl || require('@/assets/logo.png')" class="shop-img" alt="店家圖片">
                         <p class="shop-name">{{ shop.name }}</p>
                     </router-link>
                 </div>
@@ -87,7 +88,7 @@
                                  :key="shop.id"
                                  :to="{ name: 'ShopView', params: { id: shop.id } }"
                                  class="shop-card">
-                        <img :src="shop.menu[0]?.imgUrl || require('@/assets/logo.png')" class="shop-img" alt="店家圖片">
+                        <img :src="shop.menu?.[0]?.imgUrl || require('@/assets/logo.png')" class="shop-img" alt="店家圖片">
                         <p class="shop-name">{{ shop.name }}</p>
                     </router-link>
                 </div>
@@ -119,7 +120,7 @@
                         <input type="email" v-model="editCustomer.email">
                     </div>
                     <div class="modal-actions">
-                        <button type="submit" @click="updateUserInfo">儲存</button>
+                        <button type="submit">儲存</button>
                         <button type="button" @click="closeUserModal">關閉</button>
                     </div>
                 </form>
@@ -165,36 +166,46 @@
                     .filter(shop => shop.name.toLowerCase().includes(key))
                     .slice(0, 5); // 最多顯示 5 筆
             },
-             // 使用者資料
+            
+            // 使用者資料
             customer() {
                 return this.$store.getters['user/customer']
             },
 
-            // 所有店家
+            // 所有店家（從後端獲取）
             allShops() {
                 return this.$store.getters['shops/allShops']
             },
+            
+            // 加載狀態
+            isLoading() {
+                return this.$store.getters['shops/isLoading']
+            },
 
-            // 中式店家（＋搜尋）
+            // 中式店家（根據 category 過濾）
             chineseShops() {
-                const chineseIds = ['store001', 'store002', 'c1', 'c2'];
-                const key = this.keyword.trim().toLowerCase();
-
-                return this.allShops.filter(shop =>
-                    chineseIds.includes(shop.id) &&
-                    shop.name.toLowerCase().includes(key)
+                return this.allShops.filter(shop => 
+                    shop.category === '中式' || 
+                    ['store001', 'store002', 'c1', 'c2'].includes(shop.id)
                 );
             },
 
-            // 西式店家（＋搜尋）
+            // 西式店家（根據 category 過濾）
             westernShops() {
-                const westernIds = ['store003', 'store004', 'w1', 'w2'];
-                const key = this.keyword.trim().toLowerCase();
-
-                return this.allShops.filter(shop =>
-                    westernIds.includes(shop.id) &&
-                    shop.name.toLowerCase().includes(key)
+                return this.allShops.filter(shop => 
+                    shop.category === '西式' || 
+                    ['store003', 'store004', 'w1', 'w2'].includes(shop.id)
                 );
+            }
+        },
+        
+        async mounted() {
+            // 從後端載入所有店家
+            try {
+                await this.$store.dispatch('shops/fetchAllShops')
+            } catch (err) {
+                console.error('載入店家失敗:', err);
+                alert('載入店家失敗，請稍後再試');
             }
         },
         methods: {
@@ -222,17 +233,24 @@
             closeUserModal() {
                 this.userModalOpen = false;
             },
-            async updateUserInfo() {
+            async updateUser() {
                 try {
+                    // 驗證電子郵件格式
+                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                    if (this.editCustomer.email && !emailRegex.test(this.editCustomer.email)) {
+                        alert('請輸入有效的電子郵件地址');
+                        return;
+                    }
+
                     const userId = this.editCustomer.id;
                     const updates = { ...this.editCustomer };
                     delete updates.id;
 
-                    console.log('Sending updates:', userId, updates); // ✅
+                    console.log('Sending updates:', userId, updates);
 
                     const result = await this.$store.dispatch('user/updateUser', { userId, updates });
 
-                    console.log('Update result:', result); // ✅
+                    console.log('Update result:', result); 
                     alert('使用者資訊已更新！');
                     this.closeUserModal();
                 } catch (err) {
