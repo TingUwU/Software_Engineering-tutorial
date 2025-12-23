@@ -136,7 +136,7 @@ const addToCart = () => {
   }
 
   emit('add-to-cart', cartItem)
-  alert('已加入購物車')
+  // 移除 alert，交由父組件處理
   closeModal()
 }
 

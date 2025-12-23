@@ -103,16 +103,54 @@ export default {
       }
     },
 
-    async addItem({ commit, state }, { item, storeId }) {
-      // 訪客模式：使用前端狀態管理
+    async addItem({ commit, state, dispatch }, { item, storeId }) {
+      // 訪客模式：使用前端狀態管理，並檢查跨店限制
       if (state.isGuest) {
-
         const itemMenuItemId = item.menuItemId || item.id || item._id
         const existingItemIndex = state.items.findIndex(i =>
           i.menuItemId === itemMenuItemId &&
           JSON.stringify(i.customization) === JSON.stringify(item.customization)
         )
 
+        // 檢查跨店限制
+        const currentStoreId = state.storeId
+        const hasItems = state.items.length > 0
+
+        // 數據異常：有商品但 storeId 為空
+        if (hasItems && (!currentStoreId || currentStoreId === '')) {
+          const confirmed = confirm(
+            `購物車數據異常（店家資訊遺失）\n` +
+            `是否清空購物車並加入新商品？\n\n` +
+            `點擊「確定」清空購物車並繼續\n` +
+            `點擊「取消」放棄操作`
+          )
+
+          if (!confirmed) {
+            return false // 取消操作
+          }
+
+          // 清空購物車
+          await dispatch('clearCart')
+        }
+        // 正常跨店檢查
+        else if (hasItems && currentStoreId && currentStoreId !== storeId) {
+          const storeName = await dispatch('getStoreName', currentStoreId)
+          const confirmed = confirm(
+            `購物車中已有「${storeName}」的商品\n` +
+            `是否清空購物車並加入新商品？\n\n` +
+            `點擊「確定」清空購物車並繼續\n` +
+            `點擊「取消」放棄操作`
+          )
+
+          if (!confirmed) {
+            return false // 取消操作
+          }
+
+          // 清空購物車
+          await dispatch('clearCart')
+        }
+
+        // 添加商品到購物車
         if (existingItemIndex >= 0) {
           // 商品已存在，增加數量
           const existingItem = state.items[existingItemIndex]
@@ -139,9 +177,7 @@ export default {
 
         // 更新總價和店家ID
         state.totalPrice = state.items.reduce((sum, item) => sum + item.itemSubTotal, 0)
-        if (storeId) {
-          state.storeId = storeId
-        }
+        state.storeId = storeId
 
         console.log('訪客模式：成功加入商品到前端購物車')
         return { items: state.items, totalPrice: state.totalPrice, storeId: state.storeId }
@@ -149,40 +185,24 @@ export default {
 
       // 會員模式：使用後端API
       if (!state.userId) {
-        throw new Error('未設定使用者ID，無法加入商品')
-      }
-
-      const backendItem = {
-        itemId: item.menuItemId || item.itemId,
-        itemName: item.itemName,
-        price: item.unitPrice || item.price,
-        quantity: item.quantity || 1,
-        description: Array.isArray(item.customization)
-          ? item.customization.filter(s => s).join('、')
-          : (item.customization || '')
+        console.warn('未設定使用者ID，無法獲取購物車')
+        return null
       }
 
       try {
-        const res = await fetch(`${API_URL}/${state.userId}/items?storeId=${storeId}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(backendItem)
-        })
+        const res = await fetch(`${API_URL}/${state.userId}`)
 
         if (!res.ok) {
-          const errorText = await res.text()
-          throw new Error(errorText || '加入商品失敗')
+          throw new Error(`HTTP ${res.status}: 獲取購物車失敗`)
         }
 
         const data = await res.json()
-        console.log('成功加入商品:', data)
-        console.log('加入後 storeId:', data.storeId)
+        console.log('成功獲取購物車:', data)
+        console.log('購物車 storeId:', data.storeId)
         commit('SET_CART', data)
         return data
       } catch (err) {
-        console.error('加入商品失敗:', err)
+        console.error('獲取購物車失敗:', err)
         throw err
       }
     },
@@ -329,6 +349,12 @@ export default {
 
     setGuestMode({ commit }, isGuest) {
       commit('SET_GUEST_MODE', isGuest)
+    },
+
+    // 獲取店家名稱（用於跨店提示）
+    getStoreName({ rootGetters }, storeId) {
+      const shop = rootGetters['shops/getShopById'](storeId);
+      return shop ? shop.name : '其他店家';
     }
   }
 }

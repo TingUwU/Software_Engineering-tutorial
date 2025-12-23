@@ -302,9 +302,14 @@ export default {
       this.menuItemModalOpen = false
     },
 
-    handleAddToCart(item) {
-      this.$store.dispatch('cart/setStoreId', this.shop.id)
-      this.$store.dispatch('cart/addItem', { item, storeId: this.shop.id })
+    async handleAddToCart(item) {
+      const result = await this.$store.dispatch('cart/addItem', { item, storeId: this.shop.id })
+
+      // 如果 result 不是 false，表示添加成功
+      if (result !== false) {
+        alert('已加入購物車')
+      }
+      // 如果 result 是 false，表示用戶取消了操作，不顯示 alert
     },
     goLogin() {
       this.sidebarOpen = false; // 點擊後關閉側邊欄
