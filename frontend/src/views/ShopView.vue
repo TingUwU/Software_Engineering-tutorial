@@ -387,7 +387,7 @@
             },
             async handleAddToCart(cartItem) {
                 console.log('加入購物車:', cartItem);
-                
+
                 const userId = this.customer.id;
                 if (!userId) {
                     alert('請先登入');
@@ -405,7 +405,8 @@
                 console.log('準備加入購物車 - 店家ID:', storeId, '商品:', cartItem);
                 
                 try {
-                    // 檢查是否跨店或購物車數據異常
+                    // 確保購物車數據是最新的，然後檢查跨店
+                    await this.$store.dispatch('cart/fetchCart');
                     const currentStoreId = this.$store.state.cart.storeId;
                     const hasItems = this.$store.state.cart.items.length > 0;
                     
@@ -446,7 +447,10 @@
                         item: cartItem,
                         storeId: storeId
                     });
-                    
+
+                    // 確保狀態同步
+                    await this.$store.dispatch('cart/fetchCart');
+
                     alert('已加入購物車');
                 } catch (err) {
                     console.error('加入購物車失敗:', err);

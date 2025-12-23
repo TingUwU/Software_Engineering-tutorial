@@ -46,8 +46,28 @@ public class CartController {
 
         cart.setStoreId(storeId);
         Optional<CartItem> existingItems = cart.getItems().stream()
-                                           .filter(item -> item.getItemId().equals(newItem.getItemId()) &&
-                                                           String.valueOf(item.getDescription()).equals(newItem.getDescription()))
+                                           .filter(item -> {
+                                               // 比較 itemId
+                                               if (!item.getItemId().equals(newItem.getItemId())) {
+                                                   return false;
+                                               }
+
+                                               // 比較 description（處理 null 和空字符串的情況）
+                                               String itemDesc = item.getDescription();
+                                               String newItemDesc = newItem.getDescription();
+
+                                               // 兩個都為 null 或都為空字符串，視為相等
+                                               if ((itemDesc == null || itemDesc.isEmpty()) &&
+                                                   (newItemDesc == null || newItemDesc.isEmpty())) {
+                                                   return true;
+                                               }
+                                               // 都不為 null，比較內容
+                                               if (itemDesc != null && newItemDesc != null) {
+                                                   return itemDesc.equals(newItemDesc);
+                                               }
+                                               // 一個為 null 或空，一個不為，視為不相等
+                                               return false;
+                                           })
                                            .findFirst();
         if(existingItems.isPresent()){
             CartItem item = existingItems.get();

@@ -185,24 +185,44 @@ export default {
 
       // 會員模式：使用後端API
       if (!state.userId) {
-        console.warn('未設定使用者ID，無法獲取購物車')
+        console.warn('未設定使用者ID，無法添加商品到購物車')
         return null
       }
 
       try {
-        const res = await fetch(`${API_URL}/${state.userId}`)
+        // 準備要發送的商品數據
+        const cartItem = {
+          itemId: item.menuItemId || item.id || item._id,
+          itemName: item.itemName,
+          price: item.unitPrice || item.price,
+          quantity: item.quantity || 1,
+          description: Array.isArray(item.customization)
+            ? item.customization.join('、')
+            : (item.customization || ''),
+          imgUrl: item.imgUrl || ''
+        }
+
+        console.log('準備添加商品到購物車:', cartItem)
+
+        const res = await fetch(`${API_URL}/${state.userId}/items?storeId=${storeId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(cartItem)
+        })
 
         if (!res.ok) {
-          throw new Error(`HTTP ${res.status}: 獲取購物車失敗`)
+          const errorText = await res.text()
+          throw new Error(errorText || `HTTP ${res.status}: 添加商品失敗`)
         }
 
         const data = await res.json()
-        console.log('成功獲取購物車:', data)
-        console.log('購物車 storeId:', data.storeId)
+        console.log('成功添加商品到購物車:', data)
         commit('SET_CART', data)
         return data
       } catch (err) {
-        console.error('獲取購物車失敗:', err)
+        console.error('添加商品到購物車失敗:', err)
         throw err
       }
     },

@@ -278,9 +278,76 @@
             closeMenuItemModal() {
                 this.menuItemModalOpen = false;
             },
-            handleAddToCart(cartItem) {
+            async handleAddToCart(cartItem) {
                 console.log('加入購物車:', cartItem);
-                this.$store.dispatch('cart/addItem', cartItem);
+
+                const userId = this.customer.id;
+                if (!userId) {
+                    alert('請先登入');
+                    return;
+                }
+
+                // 確保 storeId 存在
+                const storeId = this.$store.state.cart.storeId;
+                if (!storeId) {
+                    console.error('店家 ID 不存在');
+                    alert('無法取得店家資訊，請重新整理頁面');
+                    return;
+                }
+
+                console.log('準備加入購物車 - 店家ID:', storeId, '商品:', cartItem);
+
+                try {
+                    // 檢查是否跨店或購物車數據異常
+                    const currentStoreId = this.$store.state.cart.storeId;
+                    const hasItems = this.$store.state.cart.items.length > 0;
+
+                    // 數據異常：有商品但 storeId 為空
+                    if (hasItems && (!currentStoreId || currentStoreId === '')) {
+                        const confirmed = confirm(
+                            `購物車數據異常（店家資訊遺失）\n` +
+                            `是否清空購物車並加入新商品？\n\n` +
+                            `點擊「確定」清空購物車並繼續\n` +
+                            `點擊「取消」放棄操作`
+                        );
+
+                        if (!confirmed) {
+                            return;
+                        }
+
+                        // 清空購物車
+                        await this.$store.dispatch('cart/clearCart');
+                    }
+                    // 正常跨店檢查
+                    else if (hasItems && currentStoreId && currentStoreId !== storeId) {
+                        const confirmed = confirm(
+                            `購物車中已有其他店家的商品\n` +
+                            `是否清空購物車並加入新商品？\n\n` +
+                            `點擊「確定」清空購物車並繼續\n` +
+                            `點擊「取消」放棄操作`
+                        );
+
+                        if (!confirmed) {
+                            return;
+                        }
+
+                        // 清空購物車
+                        await this.$store.dispatch('cart/clearCart');
+                    }
+
+                    await this.$store.dispatch('cart/addItem', { item: cartItem, storeId });
+
+                    alert('已加入購物車');
+                } catch (err) {
+                    console.error('加入購物車失敗:', err);
+
+                    // 檢查是否是跨店錯誤
+                    if (err.message && err.message.includes('跨店')) {
+                        alert('購物車不可跨店點餐，請先清空購物車');
+                    } else {
+                        alert('加入購物車失敗: ' + err.message);
+                    }
+                }
             },
             onAvatarChange(event) {
                 const file = event.target.files[0];
