@@ -24,7 +24,7 @@ export default {
     const store = useStore();
 
     onMounted(() => {
-      const user = localStorage.getItem('user');
+      const user = sessionStorage.getItem('user');
       if (user) {
         try {
           const userData = JSON.parse(user);
@@ -42,8 +42,8 @@ export default {
     });
 
     const goHome = () => {
-      const isLoggedIn = store.state.user.isLoggedIn || !!localStorage.getItem('user');
-      const user = JSON.parse(localStorage.getItem('user'));
+      const isLoggedIn = store.state.user.isLoggedIn || !!sessionStorage.getItem('user');
+      const user = JSON.parse(sessionStorage.getItem('user'));
       if (isLoggedIn&&user.role==='buyer') {
         router.push('/home');
       } else if (isLoggedIn&&user.role==='owner') {

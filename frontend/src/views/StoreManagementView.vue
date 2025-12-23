@@ -219,7 +219,7 @@ export default {
                 this.storeId = myStore.id;
                 this.currentStore = myStore;
                 // 保存當前店家資訊到 localStorage，供其他頁面使用
-                localStorage.setItem('currentStore', JSON.stringify(myStore));
+                sessionStorage.setItem('currentStore', JSON.stringify(myStore));
                 this.menuItems = myStore.menu || [];
 
                 // 從菜單項目的 tag 提取分類
@@ -498,8 +498,8 @@ export default {
 
         logout() {
             this.$store.dispatch('user/logout');
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
+            sessionStorage.removeItem('token');
+            sessionStorage.removeItem('user');
             this.$router.push('/login');
         }
     }

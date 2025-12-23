@@ -289,8 +289,8 @@
             },
             logout() {
                 this.$store.dispatch('user/logout'); // 呼叫 Vuex logout
-                localStorage.removeItem('token');    // 如果有 token
-                localStorage.removeItem('user');
+                sessionStorage.removeItem('token');    // 如果有 token
+                sessionStorage.removeItem('user');
                 this.$router.push('/login');         // 導向登入頁
             }
         }

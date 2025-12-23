@@ -95,7 +95,7 @@ export default {
     }
   },
   created() {
-    const savedOrder = localStorage.getItem('guestOrder')
+    const savedOrder = sessionStorage.getItem('guestOrder')
     if (savedOrder) {
       this.order = JSON.parse(savedOrder)
     }
@@ -119,7 +119,7 @@ export default {
         })
 
         // 清空本地存儲
-        localStorage.removeItem('guestOrder')
+        sessionStorage.removeItem('guestOrder')
         this.order = null
         alert('訂單已取消，商家將會收到通知')
       } catch (err) {

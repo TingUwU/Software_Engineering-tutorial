@@ -208,8 +208,8 @@ const onAvatarChange = (event) => {
 
 const logout = () => {
   store.dispatch('user/logout')
-  localStorage.removeItem('token')
-  localStorage.removeItem('user')
+  sessionStorage.removeItem('token')
+  sessionStorage.removeItem('user')
   router.push('/login')
 }
 

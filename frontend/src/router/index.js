@@ -42,8 +42,8 @@ const router = createRouter({
 import store from '@/store'
 
 router.beforeEach((to, from, next) => {
-    const isLoggedIn = store.state.user.isLoggedIn || !!localStorage.getItem('user')
-    const user = JSON.parse(localStorage.getItem('user'))
+    const isLoggedIn = store.state.user.isLoggedIn || !!sessionStorage.getItem('user')
+    const user = JSON.parse(sessionStorage.getItem('user'))
     if (to.meta.requiresAuth && !isLoggedIn) {
         next('/login')  // 需要登入但未登入 → 導向 /login
     } else if (to.path === '/login' && isLoggedIn&&user.role === 'buyer') {

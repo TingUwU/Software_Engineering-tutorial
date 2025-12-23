@@ -208,11 +208,11 @@ const orders = ref([])
 const userModalOpen = ref(false)
 const editCustomer = ref({ photo: '' })
 
-// 從 Vuex 或 localStorage 獲取商家資訊
+// 從 Vuex 或 sessionStorage 獲取商家資訊
 const storeId = computed(() => {
-  // 這裡假設商家資訊存在 localStorage 或 Vuex 的 user store
+  // 這裡假設商家資訊存在 sessionStorage 或 Vuex 的 user store
   // 你可以根據實際情況調整
-  const storeInfo = localStorage.getItem('currentStore')
+  const storeInfo = sessionStorage.getItem('currentStore')
   if (storeInfo) {
     return JSON.parse(storeInfo).id
   }
@@ -379,9 +379,9 @@ const onAvatarChange = (event) => {
 }
 
 const logout = () => {
-  localStorage.removeItem('token')
-  localStorage.removeItem('user')
-  localStorage.removeItem('currentStore')
+  sessionStorage.removeItem('token')
+  sessionStorage.removeItem('user')
+  sessionStorage.removeItem('currentStore')
   router.push('/login')
 }
 </script>

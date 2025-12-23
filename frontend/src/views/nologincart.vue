@@ -233,7 +233,7 @@ const checkout = async () => {
     await store.dispatch('cart/clearCart')
 
     // 保存訂單到 localStorage（訪客模式）
-    localStorage.setItem('guestOrder', JSON.stringify(createdOrder))
+    sessionStorage.setItem('guestOrder', JSON.stringify(createdOrder))
 
     alert('訂單已成功送出！訂單編號：' + createdOrder.id)
 
