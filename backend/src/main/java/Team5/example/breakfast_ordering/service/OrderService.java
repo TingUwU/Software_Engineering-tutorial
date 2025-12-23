@@ -29,7 +29,7 @@ public class OrderService {
 
     // 查詢某位顧客的訂單
     public List<Order> getOrdersByCustomer(String customerId) {
-        return orderRepository.findByCustomerId(customerId);
+        return orderRepository.findByCustomerIdOrderByCreateAtDesc(customerId);
     }
 
 
