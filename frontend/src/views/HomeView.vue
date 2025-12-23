@@ -200,9 +200,14 @@
         },
         
         async mounted() {
-            // 從後端載入所有店家
+            // 從後端載入所有店家（只有在沒有數據時才載入）
             try {
-                await this.$store.dispatch('shops/fetchAllShops')
+                const existingShops = this.$store.getters['shops/allShops'];
+                if (!existingShops || existingShops.length === 0) {
+                    await this.$store.dispatch('shops/fetchAllShops');
+                } else {
+                    console.log('使用已存在的店家數據:', existingShops.length, '家店');
+                }
             } catch (err) {
                 console.error('載入店家失敗:', err);
                 alert('載入店家失敗，請稍後再試');

@@ -295,9 +295,7 @@
                         // 如果 store 中沒有，嘗試從 API 獲取
                         console.log('Store 中找不到店家，嘗試從 API 獲取:', shopId);
                         shop = await this.$store.dispatch('shops/fetchShopById', shopId);
-
-                        // 同時獲取所有店家列表，確保其他頁面能正常工作
-                        await this.$store.dispatch('shops/fetchAllShops');
+                        // fetchShopById 現在會自動將店家加入到 allShops 中，無需額外呼叫 fetchAllShops
                     }
 
                     this.shop = shop;

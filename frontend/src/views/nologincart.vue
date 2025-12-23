@@ -183,7 +183,16 @@ const cart = computed(() => {
 const toggleSidebar = () => sidebarOpen.value = !sidebarOpen.value
 const goBack = () => router.back()
 
-const deleteItem = index => store.dispatch('cart/removeItem', index)
+const deleteItem = async (index) => {
+  const item = cart.value.items[index]
+  if (!item) return
+
+  try {
+    await store.dispatch('cart/removeItem', item.menuItemId || item.itemId)
+  } catch (err) {
+    alert('刪除失敗: ' + err.message)
+  }
+}
 const increaseQuantity = index =>
   store.dispatch('cart/updateItemQuantity', {
     index,
