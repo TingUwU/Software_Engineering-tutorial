@@ -41,6 +41,13 @@
           </select>
         </div>
         <div class="row">
+          <label>商家頭貼</label>
+          <div class="avatar-upload">
+            <img :src="vm.store.avatar || require('@/assets/logo.png')" class="avatar-preview" alt="店家頭貼">
+            <input type="file" @change="onStoreAvatarChange" accept="image/*" style="margin-top: 8px;">
+          </div>
+        </div>
+        <div class="row">
           <label>店家簡介</label>
           <textarea v-model="vm.store.description" rows="3" />
         </div>
@@ -269,6 +276,17 @@ function onAvatarChange(event) {
   }
 }
 
+function onStoreAvatarChange(event) {
+  const file = event.target.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      vm.store.avatar = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+}
+
 function logout() {
   store.dispatch('user/logout');
   sessionStorage.removeItem('token');
@@ -353,6 +371,21 @@ button.danger { background: #ffe8e8; border: 1px solid #ffb3b3; }
     object-fit: cover;
     display: block;
     margin-bottom: 8px;
+}
+
+.avatar-preview {
+    width: 100px;
+    height: 100px;
+    border-radius: 8px;
+    object-fit: cover;
+    display: block;
+    border: 2px solid #ddd;
+}
+
+.avatar-upload {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
 }
 
 /* 側邊欄 */

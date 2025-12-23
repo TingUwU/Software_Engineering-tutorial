@@ -36,6 +36,7 @@ public class Cart {
         private Integer quantity;
         private Integer subtotal;
         private String description;
+        private String imgUrl;
 
         public CartItem(){}
 
@@ -94,6 +95,14 @@ public class Cart {
 
         public void setDescription(String description){
             this.description = description;
+        }
+
+        public String getImgUrl(){
+            return this.imgUrl;
+        }
+
+        public void setImgUrl(String imgUrl){
+            this.imgUrl = imgUrl;
         }
     }
 

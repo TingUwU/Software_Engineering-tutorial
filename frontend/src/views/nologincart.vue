@@ -38,7 +38,8 @@
             class="cart-item"
           >
             <div class="item-image">
-              <div class="image-placeholder">餐點圖片</div>
+              <img v-if="item.imgUrl" :src="item.imgUrl" class="cart-item-image" alt="餐點圖片">
+              <div v-else class="image-placeholder">餐點圖片</div>
             </div>
 
             <div class="item-info">
@@ -157,10 +158,27 @@ const takeoutTime = ref('')
 const paymentMethod = ref('')
 const phoneNumber = ref('')
 // 購物車
-const cart = computed(() => ({
-  items: store.state.cart.items || [],
-  totalAmount: store.getters['cart/totalAmount'] || 0
-}))
+const cart = computed(() => {
+  const items = (store.state.cart.items || []).map(item => {
+
+    if (!item.imgUrl) {
+      const storeId = store.state.cart.storeId
+      if (storeId) {
+        const menuItem = store.getters['shops/getMenuItem'](storeId, item.menuItemId || item.itemId)
+        if (menuItem && menuItem.imgUrl) {
+
+          return { ...item, imgUrl: menuItem.imgUrl }
+        }
+      }
+    }
+    return item
+  })
+
+  return {
+    items,
+    totalAmount: store.getters['cart/totalAmount'] || 0
+  }
+})
 
 const toggleSidebar = () => sidebarOpen.value = !sidebarOpen.value
 const goBack = () => router.back()
@@ -251,8 +269,9 @@ const checkout = async () => {
 
 /* Cart item 排版 */
 .cart-item { display: flex; gap: 20px; padding: 20px; margin-bottom: 20px; background-color: white; border-radius: 12px; align-items: center; }
-.item-image { width: 100px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: #f0f7ff; border-radius: 8px; border: 2px solid #0069D9; }
+.item-image { width: 100px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: #f0f7ff; border-radius: 8px; }
 .image-placeholder { text-align: center; color: #0069D9; font-size: 12px; }
+.cart-item-image { width: 100%; height: 100%; object-fit: cover; border-radius: 6px; }
 .item-info { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 8px; }
 .item-name { font-size: 18px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .item-customization { font-size: 14px; color: #666; white-space: normal; word-break: break-word; }

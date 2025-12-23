@@ -59,7 +59,14 @@
 
         <!-- 店家資訊 -->
         <div class="shop-info">
-            <p>營業時間: {{ todayBusiness.start || '未營業' }} ~ {{ todayBusiness.close || '未營業' }}</p>
+            <div v-if="shop.description" class="shop-description">
+                <h4>店家簡介</h4>
+                <p class="description-text">{{ shop.description }}</p>
+            </div>
+            <div class="business-hours">
+                <h4>營業時間</h4>
+                <pre class="business-hours-text">{{ formattedBusinessHours }}</pre>
+            </div>
             <p>地址: {{ shop.address }}</p>
         </div>
 
@@ -214,9 +221,48 @@
             // 取得今天營業時間
             todayBusiness() {
                 if (!this.shop) return {};//防止還沒加載出來就被訪問
-                const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+                const days = ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"];
                 const today = days[new Date().getDay()];
                 return this.shop.businessHours.find(h => h.day === today) || {};//找到今天營業時間來決定顯示是否營業中
+            },
+
+            // 格式化營業時間顯示
+            formattedBusinessHours() {
+                if (!this.shop || !this.shop.businessHours || this.shop.businessHours.length === 0) {
+                    return '暫無營業時間資訊';
+                }
+
+                // 將營業時間按時間分組
+                const timeGroups = {};
+                this.shop.businessHours.forEach(bh => {
+                    const key = `${bh.start || ''}-${bh.end || ''}-${bh.note || ''}`;
+                    if (!timeGroups[key]) {
+                        timeGroups[key] = {
+                            start: bh.start,
+                            end: bh.end,
+                            note: bh.note,
+                            days: []
+                        };
+                    }
+                    timeGroups[key].days.push(bh.day);
+                });
+
+                // 格式化輸出
+                const result = [];
+                Object.values(timeGroups).forEach(group => {
+                    if (group.note && group.note.trim() !== '') {
+                        // 有備註（如公休）
+                        result.push(`${group.days.join('、')}：${group.note}`);
+                    } else if (group.start && group.end) {
+                        // 有營業時間
+                        result.push(`${group.days.join('、')}：${group.start} ~ ${group.end}`);
+                    } else {
+                        // 無營業時間
+                        result.push(`${group.days.join('、')}：未營業`);
+                    }
+                });
+
+                return result.join('\n');
             },
             // 根據關鍵字過濾
             filteredCategories() {
@@ -333,6 +379,7 @@
                     price: dish.price,
                     description: dish.description,
                     customOptions: dish.customOptions || [],
+                    imgUrl: dish.imgUrl, // 添加圖片URL
                     storeId: this.shop.id // 添加店家ID
                 };
                 this.menuItemModalOpen = true;
@@ -554,16 +601,16 @@
     /* 店家名稱 + 收藏 */
     .shop-header {
         display: flex;
-        justify-content: center; /* 置中 */
+        justify-content: center;
         align-items: center;
         margin-top: 20px;
-        gap: 10px; /* 收藏按鈕和店名間距 */
+        gap: 10px; 
     }
 
     .shop-name {
         font-size: 28px;
         font-weight: bold;
-        color: #0069D9; /* 藍色 */
+        color: #0069D9; 
     }
 
     .favorite-btn {
@@ -860,6 +907,51 @@
 
     .favorite-btn.active span {
         color: red; /* 已收藏顯示紅色 */
+    }
+
+    /* Shop info */
+    .shop-info {
+        margin-top: 20px;
+        padding: 20px;
+        border-radius: 8px;
+    }
+
+    .shop-description {
+        margin-bottom: 20px;
+    }
+
+    .shop-description h4 {
+        margin: 0 0 8px 0;
+        color: #0069D9;
+        font-size: 16px;
+        font-weight: 600;
+    }
+
+    .description-text {
+        margin: 0;
+        font-size: 14px;
+        line-height: 1.6;
+        color: #555;
+    }
+
+    .business-hours {
+        margin-bottom: 15px;
+    }
+
+    .business-hours h4 {
+        margin: 0 0 10px 0;
+        color: #0069D9;
+        font-size: 16px;
+        font-weight: 600;
+    }
+
+    .business-hours-text {
+        margin: 0;
+        font-family: inherit;
+        font-size: 14px;
+        line-height: 1.6;
+        white-space: pre-line;
+        color: #333;
     }
     .sidebar-logout {
         margin-top: auto; /* 推到底部 */

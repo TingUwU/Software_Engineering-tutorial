@@ -6,13 +6,18 @@ import java.util.Optional;
 
 import Team5.example.breakfast_ordering.model.Cart;
 import Team5.example.breakfast_ordering.model.Cart.CartItem;
+import Team5.example.breakfast_ordering.model.Store;
 import Team5.example.breakfast_ordering.repository.CartRepository;
+import Team5.example.breakfast_ordering.repository.StoreRepository;
 
 @RestController
 @RequestMapping("/api/carts")
 public class CartController {
     @Autowired
     private CartRepository cartRepository;
+
+    @Autowired
+    private StoreRepository storeRepository;
 
     // 用 userId 回傳該使用者的購物車
     @GetMapping("/{userId}")
@@ -48,8 +53,32 @@ public class CartController {
             CartItem item = existingItems.get();
             item.setQuantity(item.getQuantity() + newItem.getQuantity());
             item.setSubtotal(item.getPrice() * item.getQuantity());
+
+            // 如果現有項目沒有圖片URL，嘗試從店家資料中獲取
+            if (item.getImgUrl() == null || item.getImgUrl().isEmpty()) {
+                Store store = storeRepository.findById(storeId).orElse(null);
+                if (store != null) {
+                    Store.MenuItem existingMenuItem = store.getMenu().stream()
+                        .filter(menuItem -> menuItem.getId().toString().equals(item.getItemId()))
+                        .findFirst().orElse(null);
+                    if (existingMenuItem != null && existingMenuItem.getImgUrl() != null) {
+                        item.setImgUrl(existingMenuItem.getImgUrl());
+                    }
+                }
+            }
         }
         else{
+            // 從店家資料中獲取商品圖片URL
+            Store store = storeRepository.findById(storeId).orElse(null);
+            if (store != null) {
+                Store.MenuItem menuItem = store.getMenu().stream()
+                    .filter(item -> item.getId().toString().equals(newItem.getItemId()))
+                    .findFirst().orElse(null);
+                if (menuItem != null) {
+                    newItem.setImgUrl(menuItem.getImgUrl());
+                }
+            }
+
             newItem.setSubtotal(newItem.getPrice() * newItem.getQuantity());
             cart.getItems().add(newItem);
         }

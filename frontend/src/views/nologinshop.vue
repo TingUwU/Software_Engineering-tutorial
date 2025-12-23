@@ -57,7 +57,14 @@
 
     <!-- 店家資訊 -->
     <div class="shop-info">
-      <p>營業時間: {{ todayBusiness.start || '未營業' }} ~ {{ todayBusiness.close || '未營業' }}</p>
+      <div v-if="shop.description" class="shop-description">
+        <h4>店家簡介</h4>
+        <p class="description-text">{{ shop.description }}</p>
+      </div>
+      <div class="business-hours">
+        <h4>營業時間</h4>
+        <pre class="business-hours-text">{{ formattedBusinessHours }}</pre>
+      </div>
       <p>地址: {{ shop.address }}</p>
     </div>
 
@@ -180,9 +187,48 @@ export default {
     },
     todayBusiness() {
       if (!this.shop) return {}
-      const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
+      const days = ['星期日','星期一','星期二','星期三','星期四','星期五','星期六']
       const today = days[new Date().getDay()]
       return this.shop.businessHours.find(h => h.day === today) || {}
+    },
+
+    // 格式化營業時間顯示
+    formattedBusinessHours() {
+      if (!this.shop || !this.shop.businessHours || this.shop.businessHours.length === 0) {
+        return '暫無營業時間資訊';
+      }
+
+      // 將營業時間按時間分組
+      const timeGroups = {};
+      this.shop.businessHours.forEach(bh => {
+        const key = `${bh.start || ''}-${bh.end || ''}-${bh.note || ''}`;
+        if (!timeGroups[key]) {
+          timeGroups[key] = {
+            start: bh.start,
+            end: bh.end,
+            note: bh.note,
+            days: []
+          };
+        }
+        timeGroups[key].days.push(bh.day);
+      });
+
+      // 格式化輸出
+      const result = [];
+      Object.values(timeGroups).forEach(group => {
+        if (group.note && group.note.trim() !== '') {
+          // 有備註（如公休）
+          result.push(`${group.days.join('、')}：${group.note}`);
+        } else if (group.start && group.end) {
+          // 有營業時間
+          result.push(`${group.days.join('、')}：${group.start} ~ ${group.end}`);
+        } else {
+          // 無營業時間
+          result.push(`${group.days.join('、')}：未營業`);
+        }
+      });
+
+      return result.join('\n');
     },
 
     filteredCategories() {
@@ -387,8 +433,53 @@ export default {
     }
 
     /* 店家資訊 */
+    .shop-info {
+        margin-top: 20px;
+        padding: 20px;
+        background: #f8f9fa;
+        border-radius: 8px;
+    }
+
+    .shop-description {
+        margin-bottom: 20px;
+    }
+
+    .shop-description h4 {
+        margin: 0 0 8px 0;
+        color: #0069D9;
+        font-size: 16px;
+        font-weight: 600;
+    }
+
+    .description-text {
+        margin: 0;
+        font-size: 14px;
+        line-height: 1.6;
+        color: #555;
+    }
+
     .shop-info p {
         margin: 4px 0;
+    }
+
+    .business-hours {
+        margin-bottom: 15px;
+    }
+
+    .business-hours h4 {
+        margin: 0 0 10px 0;
+        color: #0069D9;
+        font-size: 16px;
+        font-weight: 600;
+    }
+
+    .business-hours-text {
+        margin: 0;
+        font-family: inherit;
+        font-size: 14px;
+        line-height: 1.6;
+        white-space: pre-line;
+        color: #333;
     }
 
     /* 搜尋欄 */

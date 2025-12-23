@@ -123,6 +123,7 @@ export default function useStoreSettingViewModel() {
         category: store.category,
         coordinates: store.coordinates,
         businessHours: store.businessHours,
+        avatar: store.avatar,
         isActive: store.isActive,
         updatedAt: store.updatedAt.toISOString(),
       };

@@ -84,7 +84,7 @@
                         class="shop-card"
                     >
                         <img
-                            :src="shop.menu[0]?.imgUrl || require('@/assets/logo.png')"
+                            :src="shop.avatar || shop.menu[0]?.imgUrl || require('@/assets/logo.png')"
                             class="shop-img"
                             alt="shop"
                         >
@@ -108,7 +108,7 @@
                         class="shop-card"
                     >
                         <img
-                            :src="shop.menu[0]?.imgUrl || require('@/assets/logo.png')"
+                            :src="shop.avatar || shop.menu[0]?.imgUrl || require('@/assets/logo.png')"
                             class="shop-img"
                             alt="shop"
                         >
@@ -466,6 +466,7 @@ export default {
         height: 110px;
         border-radius: 12px 12px 0 0;
         object-fit: cover;
+        display: block;
     }
 
     .shop-name {

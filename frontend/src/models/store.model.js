@@ -16,6 +16,7 @@ export function createEmptyStore() {
     category: '',             // 店家類別（中式/西式）
     coordinates: [0, 0],      // [lng, lat], required
     businessHours: [],        // { day, start, end, note }[]
+    avatar: '',               // 商家頭貼
     menu: [],                 // 菜單（MenuItem[]）
     isActive: true,
     updatedAt: new Date(),    // 送出時更新

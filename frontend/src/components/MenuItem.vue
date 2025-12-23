@@ -9,7 +9,8 @@
 
         <div class="product-top">
           <div class="product-image"><!--圖片區-->
-            <div class="image-placeholder">餐點圖片</div>
+            <img v-if="productItem.imgUrl" :src="productItem.imgUrl" class="product-image-display" alt="餐點圖片">
+            <div v-else class="image-placeholder">餐點圖片</div>
           </div>
           <div class="product-info"><!--資訊區-->
             <h2 class="product-name">{{ productItem.itemName }}</h2>
@@ -194,7 +195,8 @@ const addToCart = () => {
     unitPrice: productItem.value.price + extraPrice,
     quantity: quantity.value,
     customization: customizationText,
-    itemSubTotal: (productItem.value.price + extraPrice) * quantity.value
+    itemSubTotal: (productItem.value.price + extraPrice) * quantity.value,
+    imgUrl: productItem.value.imgUrl
   }
 
   emit('add-to-cart', cartItem)
@@ -330,6 +332,13 @@ const addToFavorite = () => {
 .image-placeholder {
   text-align: center;
   color: #aea5a5;
+}
+
+.product-image-display {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 10px;
 }
 
 .product-info {

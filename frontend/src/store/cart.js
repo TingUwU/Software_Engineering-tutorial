@@ -44,9 +44,10 @@ export default {
         quantity: item.quantity,
         subtotal: item.subtotal,
         itemSubTotal: item.subtotal,
-        customization: item.description 
-          ? item.description.split('、').filter(s => s.trim()) 
-          : []
+        customization: item.description
+          ? item.description.split('、').filter(s => s.trim())
+          : [],
+        imgUrl: item.imgUrl
       }))
     },
 
@@ -130,7 +131,8 @@ export default {
             unitPrice: item.unitPrice || item.price,
             quantity: item.quantity || 1,
             customization: item.customization || [],
-            itemSubTotal: (item.unitPrice || item.price) * (item.quantity || 1)
+            itemSubTotal: (item.unitPrice || item.price) * (item.quantity || 1),
+            imgUrl: item.imgUrl
           }
           state.items.push(newItem)
         }
