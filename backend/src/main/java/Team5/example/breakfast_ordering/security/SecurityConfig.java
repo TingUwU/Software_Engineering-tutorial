@@ -18,7 +18,7 @@ public class SecurityConfig {
         http
             .csrf(csrf -> csrf.disable()) 
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/**", "/error").permitAll()  // 可以挑選哪些 API 需要認證才能用
+                .requestMatchers("/", "/index.html", "/css/**", "/js/**", "/assets/**", "/api/**", "/error", "/auth/**").permitAll()  // 設定哪些 API 不需要憑證
                 .anyRequest().authenticated()
             )
             .oauth2Login(oauth2 -> oauth2
