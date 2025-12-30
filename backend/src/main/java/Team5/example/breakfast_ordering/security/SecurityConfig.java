@@ -26,7 +26,7 @@ public class SecurityConfig {
                     .userService(customOAuth2UserService)
                 )
                 // 登入成功後跳轉的網址
-                .defaultSuccessUrl("http://localhost:8080/home", true) 
+                .defaultSuccessUrl("/home", true) 
             );
         
         return http.build();
