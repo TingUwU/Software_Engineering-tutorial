@@ -1,0 +1,42 @@
+@startuml C4_Component
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+' 設定標題
+title Component Diagram for Breakfast Ordering System
+
+' 定義邊界 (你的後端應用程式)
+Container_Boundary(api, "Breakfast Ordering API (Spring Boot)") {
+    
+    ' === 這裡是你要填寫/自動生成的部分 ===
+    
+    ' 1. Controller 層 (負責接收 API)
+    Component(storeCtrl, "StoreController", "Spring MVC RestController", "提供建立店家、查詢菜單 API")
+    Component(orderCtrl, "OrderController", "Spring MVC RestController", "提供下單、查詢訂單 API")
+
+    ' 2. Service 層 (負責商業邏輯)
+    Component(storeSvc, "StoreService", "Spring Service", "驗證老闆身分、邏輯處理")
+    Component(orderSvc, "OrderService", "Spring Service", "計算金額、檢查庫存")
+
+    ' 3. Repository 層 (負責資料庫)
+    Component(storeRepo, "StoreRepository", "MongoRepository", "店舖資料存取")
+    Component(orderRepo, "OrderRepository", "MongoRepository", "訂單資料存取")
+
+    ' === 關係連線 (自動排版) ===
+    
+    ' Controller -> Service
+    Rel(storeCtrl, storeSvc, "Uses")
+    Rel(orderCtrl, orderSvc, "Uses")
+
+    ' Service -> Repository
+    Rel(storeSvc, storeRepo, "Uses")
+    Rel(orderSvc, orderRepo, "Uses")
+}
+
+' 外部系統 (資料庫)
+ContainerDb(mongo, "MongoDB", "NoSQL Database", "儲存店家與訂單資料")
+
+' 連線到資料庫
+Rel(storeRepo, mongo, "Reads/Writes")
+Rel(orderRepo, mongo, "Reads/Writes")
+
+@enduml
