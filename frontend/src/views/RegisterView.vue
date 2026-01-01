@@ -132,7 +132,7 @@
         }
 
         try {
-            const response = await fetch('/https://breakfast-team5.onrender.com/api/users/register', {
+            const response = await fetch('https://breakfast-team5.onrender.com/api/users/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(registerData)
@@ -151,24 +151,33 @@
 
             alert('註冊成功！')
             router.push('/login')
-
         } catch (err) {
             console.error('註冊錯誤:', err)
             alert(`註冊失敗: ${err.message}`)
         }
     }
 
-const backToLogin = () => {
-  router.push('/login')
-}
+    const backToLogin = () => {
+      router.push('/login')
+    }
 
-const registerWithGoogle = () => {
-  alert('未實作')
-}
+// ⚠️ 修正重點 2：實作 Google 登入導向
+    const registerWithGoogle = () => {
+        window.location.href = 'https://breakfast-team5.onrender.com/oauth2/authorization/google'
+    }
 
-const registerWithFacebook = () => {
-  alert('未實作')
-}
+    // ⚠️ 修正重點 3：實作 Facebook 登入導向
+    const registerWithFacebook = () => {
+        window.location.href = 'https://breakfast-team5.onrender.com/oauth2/authorization/facebook'
+    }
+
+// const registerWithGoogle = () => {
+//   alert('未實作')
+// }
+
+// const registerWithFacebook = () => {
+//   alert('未實作')
+// }
 </script>
 
 <style scoped>
