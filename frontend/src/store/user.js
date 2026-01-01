@@ -1,7 +1,7 @@
 // import { ref } from 'vue'
 // import { createStore } from 'vuex'
 
-const API_URL = 'http://localhost:8088/api/users'
+const API_URL = 'https://breakfast-team5.onrender.com/api/users'
 
 export default {
   namespaced: true,

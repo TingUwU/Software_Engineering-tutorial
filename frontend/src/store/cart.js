@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:8088/api/carts'
+const API_URL = 'https://breakfast-team5.onrender.com/api/carts'
 
 export default {
   namespaced: true,

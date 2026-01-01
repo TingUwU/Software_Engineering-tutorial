@@ -46,7 +46,7 @@ export default function useStoreSettingViewModel() {
     // 清空之前的錯誤
     validationErrors.value = [];
     try {
-      const res = await fetch(`http://localhost:8088/api/stores/${id}`);
+      const res = await fetch(`https://breakfast-team5.onrender.com/api/stores/${id}`);
       if (!res.ok) {
         let errorMessage = `HTTP ${res.status}: `;
         try {
@@ -108,8 +108,8 @@ export default function useStoreSettingViewModel() {
 
     try {
       const url = isEditMode.value
-        ? `http://localhost:8088/api/stores/${storeId.value}`
-        : 'http://localhost:8088/api/stores';
+        ? `https://breakfast-team5.onrender.com/api/stores/${storeId.value}`
+        : 'https://breakfast-team5.onrender.com/api/stores';
 
       const method = isEditMode.value ? 'PUT' : 'POST';
 
