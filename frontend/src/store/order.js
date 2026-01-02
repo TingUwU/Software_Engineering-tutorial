@@ -26,7 +26,9 @@ export default {
   actions: {
     async fetchOrders({ commit }) {
       try {
-        const res = await fetch(API_URL)
+        const res = await fetch(API_URL, {
+          credentials: 'include'
+        })
         if (!res.ok) throw new Error('取得訂單列表失敗')
         const data = await res.json()
         commit('SET_ORDERS', data)
@@ -38,7 +40,9 @@ export default {
     },
     async fetchStoreOrders({ commit }, storeId) {
       try {
-        const res = await fetch(`${API_URL}/store/${storeId}`)
+        const res = await fetch(`${API_URL}/store/${storeId}`, {
+          credentials: 'include'
+        })
         if (!res.ok) throw new Error('取得商家訂單失敗')
         const data = await res.json()
         commit('SET_ORDERS', data)
@@ -50,7 +54,9 @@ export default {
     },
     async fetchCustomerOrders({ commit }, customerId) {
       try {
-        const res = await fetch(`${API_URL}/customer/${customerId}`)
+        const res = await fetch(`${API_URL}/customer/${customerId}`, {
+          credentials: 'include'
+        })
         if (!res.ok) throw new Error('取得顧客訂單失敗')
         const data = await res.json()
         commit('SET_ORDERS', data)
@@ -62,7 +68,9 @@ export default {
     },
     async fetchOrderById({ commit }, orderId) {
       try {
-        const res = await fetch(`${API_URL}/${orderId}`)
+        const res = await fetch(`${API_URL}/${orderId}`, {
+          credentials: 'include'
+        })
         if (!res.ok) throw new Error('取得訂單資料失敗')
         const data = await res.json()
         commit('SET_CURRENT_ORDER', data)
@@ -76,6 +84,7 @@ export default {
       try {
         const res = await fetch(API_URL, {
           method: 'POST',
+          credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(orderData)
         })
@@ -92,6 +101,7 @@ export default {
       try {
         const res = await fetch(`${API_URL}/${orderId}`, {
           method: 'PATCH',
+          credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(updates)
         })
@@ -106,7 +116,10 @@ export default {
     },
     async deleteOrder({ commit, state }, orderId) {
       try {
-        const res = await fetch(`${API_URL}/${orderId}`, { method: 'DELETE' })
+        const res = await fetch(`${API_URL}/${orderId}`, { 
+          method: 'DELETE',
+          credentials: 'include' 
+        })
         if (!res.ok) throw new Error('刪除訂單失敗')
         commit('SET_ORDERS', state.orders.filter(order => order.id !== orderId))
         return true

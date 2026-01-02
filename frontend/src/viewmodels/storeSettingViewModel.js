@@ -46,7 +46,9 @@ export default function useStoreSettingViewModel() {
     // 清空之前的錯誤
     validationErrors.value = [];
     try {
-      const res = await fetch(`https://breakfast-team5.onrender.com/api/stores/${id}`);
+      const res = await fetch(`https://breakfast-team5.onrender.com/api/stores/${id}`, {
+        credentials: 'include'
+      });
       if (!res.ok) {
         let errorMessage = `HTTP ${res.status}: `;
         try {
@@ -139,6 +141,7 @@ export default function useStoreSettingViewModel() {
 
       const res = await fetch(url, {
         method: method,
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${currentUserId}`

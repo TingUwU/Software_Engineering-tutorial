@@ -54,7 +54,9 @@ export default {
       commit('CLEAR_ERROR')
 
       try{
-        const res = await fetch(API_URL)
+        const res = await fetch(API_URL, {
+          credentials: 'include'
+        })
 
         if(!res.ok){
           throw new Error('取得店家失敗');
@@ -78,7 +80,9 @@ export default {
       commit('CLEAR_ERROR')
 
       try{
-        const res = await fetch(`${API_URL}/${shopId}`)
+        const res = await fetch(`${API_URL}/${shopId}`, {
+          credentials: 'include'
+        })
 
         if(!res.ok){
           throw new Error('取得店家詳情失敗');
@@ -114,7 +118,9 @@ export default {
 
       try{
         const url=`${API_URL}/${shopId}/search-product${keyword?`?keyword=${encodeURIComponent(keyword)}`:''}`
-        const res=await fetch(url)
+        const res=await fetch(url, {
+          credentials: 'include'
+        })
 
         if(!res.ok){
           throw new Error('搜尋商品失敗');

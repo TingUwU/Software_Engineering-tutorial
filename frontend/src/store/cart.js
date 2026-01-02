@@ -86,7 +86,9 @@ export default {
       }
 
       try {
-        const res = await fetch(`${API_URL}/${state.userId}`)
+        const res = await fetch(`${API_URL}/${state.userId}`, {
+          credentials: 'include'
+        })
 
         if (!res.ok) {
           throw new Error(`HTTP ${res.status}: 獲取購物車失敗`)
@@ -206,6 +208,7 @@ export default {
 
         const res = await fetch(`${API_URL}/${state.userId}/items?storeId=${storeId}`, {
           method: 'POST',
+          credentials: 'include',
           headers: {
             'Content-Type': 'application/json'
           },
@@ -251,7 +254,8 @@ export default {
 
       try {
         const res = await fetch(`${API_URL}/${state.userId}/items/${itemId}`, {
-          method: 'DELETE'
+          method: 'DELETE',
+          credentials: 'include'
         })
 
         if (!res.ok) {
@@ -345,7 +349,8 @@ export default {
 
       try {
         const res = await fetch(`${API_URL}/${state.userId}`, {
-          method: 'DELETE'
+          method: 'DELETE',
+          credentials: 'include'
         })
 
         if (!res.ok) {
