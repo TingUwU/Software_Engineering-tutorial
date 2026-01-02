@@ -10,7 +10,7 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
-                // .allowedOrigins("http://localhost:8080", "http://localhost:5173") // 允許的前端網址
+                .allowedOrigins("https://breakfast-frontend.onrender.com") // 允許的前端網址
                 .allowedOriginPatterns("*")
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
                 .allowedHeaders("*")
