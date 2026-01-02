@@ -101,9 +101,24 @@ public class UserController {
         if (authentication == null || !authentication.isAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-        
-        User user = userRepository.findByAccount(authentication.getName())
-                .orElseThrow(() -> new RuntimeException("找不到使用者資料")); 
+
+        String account = authentication.getName();
+
+        // 嘗試從資料庫找
+        User user = userRepository.findByAccount(account).orElse(null);
+
+        if (user == null) {
+            // 如果資料庫沒有這個人就自動註冊
+            System.out.println("新用戶 (Google): " + account + "，正在建立資料...");
+            
+            user = new User();
+            user.setAccount(account); // 把 Google ID 當作帳號
+            user.setRole("buyer");    // 預設角色
+            user.setNickname("Google User"); // 暫時名稱，之後可以從 authentication 抓真實姓名
+            
+            // 儲存到資料庫
+            userRepository.save(user);
+        }
 
         return ResponseEntity.ok(user);
     }
