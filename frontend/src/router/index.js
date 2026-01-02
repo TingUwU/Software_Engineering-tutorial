@@ -42,7 +42,7 @@ const router = createRouter({
 import store from '@/store'
 
 router.beforeEach((to, from, next) => {
-    console.log(`Navigating to ${to.path} from ${from.path}`);
+    console.log(`Navigating to ${to.path} from ${from.path}`)
     next()
     // const isLoggedIn = store.state.user.isLoggedIn || !!sessionStorage.getItem('user')
     // const user = JSON.parse(sessionStorage.getItem('user'))
