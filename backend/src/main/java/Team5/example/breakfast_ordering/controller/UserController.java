@@ -8,6 +8,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -114,7 +115,26 @@ public class UserController {
             user = new User();
             user.setAccount(account); // 把 Google ID 當作帳號
             user.setRole("buyer");    // 預設角色
-            user.setNickname("Google User"); // 暫時名稱，之後可以從 authentication 抓真實姓名
+            user.setPassword("GOOGLE_LOGIN_" + java.util.UUID.randomUUID().toString());
+            if (authentication.getPrincipal() instanceof OAuth2User) {
+                OAuth2User oauth2User = (OAuth2User) authentication.getPrincipal();
+                
+                // 抓 Email
+                String email = oauth2User.getAttribute("email");
+                if (email != null) user.setEmail(email);
+                
+                // 抓名字
+                String name = oauth2User.getAttribute("name"); // Google 通常回傳全名
+                user.setNickname(name != null ? name : "Google User");
+                
+                // 抓大頭貼
+                String picture = oauth2User.getAttribute("picture");
+                user.setPhoto(picture);
+            } else {
+                // 如果抓不到，就用預設值
+                user.setNickname("Google User");
+                user.setEmail("google_" + account + "@example.com"); // 避免 email 必填報錯
+            }
             
             // 儲存到資料庫
             userRepository.save(user);
