@@ -1,7 +1,15 @@
 package Team5.example.breakfast_ordering.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 
 import java.util.List;
@@ -39,7 +47,7 @@ public class UserController {
 
     // 登入
     @PostMapping("/login")
-    public User login(@RequestBody User loginRequest){
+    public User login(@RequestBody User loginRequest, HttpServletRequest request){
         User user = userRepository.findByAccount(loginRequest.getAccount())
         .orElseThrow(() -> new RuntimeException("帳號不存在"));
 
@@ -55,6 +63,26 @@ public class UserController {
             throw new RuntimeException("身份選擇錯誤，該帳號註冊時選擇的是" + 
                 (user.getRole().equals("owner") ? "店家" : "顧客"));
         }
+
+        // 建立權限
+        SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + user.getRole());
+
+        // 建立認證 Token
+        Authentication authentication = new UsernamePasswordAuthenticationToken(
+                user.getAccount(), 
+                null, 
+                List.of(authority) 
+        );
+
+        // 建立 SecurityContext 並放入 Token
+        SecurityContext context = SecurityContextHolder.createEmptyContext();
+        context.setAuthentication(authentication);
+        SecurityContextHolder.setContext(context);
+
+        //建立 Session 並將 Context 存進去
+        HttpSession session = request.getSession(true);
+        session.setAttribute("SPRING_SECURITY_CONTEXT", context);
+
 
         return user;
     }
