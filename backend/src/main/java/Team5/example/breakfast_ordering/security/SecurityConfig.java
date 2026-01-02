@@ -25,7 +25,8 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable()) 
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/", "/index.html", "/css/**", "/js/**", "/assets/**", "/api/**", "/error", "/auth/**").permitAll()  // 設定哪些 API 不需要憑證
+                .requestMatchers("/api/users/login", "/api/users/register").permitAll()
+                .requestMatchers("/", "/index.html", "/css/**", "/js/**", "/assets/**", "/error", "/auth/**", "/oauth2/**").permitAll()  // 設定哪些 API 不需要憑證
                 .anyRequest().authenticated()
             )
             .oauth2Login(oauth2 -> oauth2
