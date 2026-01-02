@@ -97,6 +97,39 @@ export default {
       return data
     },
 
+    // 新增：檢查 OAuth 登入狀態 (Session Check)
+    async checkLoginStatus({ commit, dispatch }) {
+      try {
+        // 呼叫後端的 /api/users/me (記得確認你後端有寫這支 API)
+        const res = await fetch('https://breakfast-team5.onrender.com/api/users/me', {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include' // 關鍵！這行會讓瀏覽器帶上 Google 登入後的 Cookie
+        });
+
+        if (res.ok) {
+            const userData = await res.json();
+            console.log('Session 檢查成功，使用者已登入:', userData);
+
+            // 更新 Vuex 狀態
+            commit('UPDATE_CUSTOMER', userData);
+            commit('LOGIN');
+
+            // 如果有購物車邏輯，也要順便設定
+            if (userData.id) {
+                dispatch('cart/setUserId', userData.id, { root: true });
+            }
+            return true; // 告訴 Router：檢查成功
+        } else {
+            console.log('Session 檢查失敗 (未登入或過期)');
+            return false;
+        }
+      } catch (e) {
+        console.error('檢查登入狀態發生錯誤:', e);
+        return false;
+      }
+    },
+
     logout({ commit }) {
       commit('LOGOUT')
     },
