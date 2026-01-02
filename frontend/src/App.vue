@@ -14,7 +14,7 @@
 </template>
 
 <script>
-import { onMounted } from 'vue';
+import { onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useStore } from 'vuex';
 
@@ -23,31 +23,30 @@ export default {
     const router = useRouter();
     const store = useStore();
 
-    onMounted(() => {
-      const user = sessionStorage.getItem('user');
-      if (user) {
-        try {
-          const userData = JSON.parse(user);
-          // 恢復用戶登錄狀態
-          store.commit('user/UPDATE_CUSTOMER', userData);
-          store.commit('user/LOGIN');
-          // 設置購物車 userId
-          if (userData.id) {
-            store.dispatch('cart/setUserId', userData.id);
-          }
-        } catch (err) {
-          console.error('恢復用戶狀態失敗:', err);
-        }
+    // 透過 computed 取得目前使用者狀態，這樣資料變動時會自動更新
+    const customer = computed(() => store.state.user.customer);
+    const isLoggedIn = computed(() => store.state.user.customer.isLoggedIn);
+
+    onMounted(async () => {
+      console.log('App mounted. Checking authentication status...');
+      
+      try {
+        await store.dispatch('user/checkAuth');
+        console.log('Session check successful.');
+      } catch (err) {
+        console.log('No active session found (User is guest).');
       }
     });
 
     const goHome = () => {
-      const isLoggedIn = store.state.user.isLoggedIn || !!sessionStorage.getItem('user');
-      const user = JSON.parse(sessionStorage.getItem('user'));
-      if (isLoggedIn&&user.role==='buyer') {
-        router.push('/home');
-      } else if (isLoggedIn&&user.role==='owner') {
-        router.push('/store-management');
+      if (isLoggedIn.value) {
+        if (customer.value.role === 'buyer') {
+          router.push('/home');
+        } else if (customer.value.role === 'owner') {
+          router.push('/store-management');
+        } else {
+          router.push('/home');
+        }
       } else {
         router.push('/nologinhome');
       }

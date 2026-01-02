@@ -1,6 +1,8 @@
 package Team5.example.breakfast_ordering.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -92,6 +94,18 @@ public class UserController {
     public User getUserProfile(@PathVariable String userId){
         return userRepository.findById(userId)
         .orElseThrow(() -> new RuntimeException("帳號不存在"));
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<User> getCurrentUser(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        
+        User user = userRepository.findByAccount(authentication.getName())
+                .orElseThrow(() -> new RuntimeException("找不到使用者資料")); 
+
+        return ResponseEntity.ok(user);
     }
 
     // 修改使用者資訊

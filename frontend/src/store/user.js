@@ -133,6 +133,31 @@ export default {
       return data;
     },
 
+    async checkAuth({ commit, dispatch }) {
+      try {
+        const res = await fetch(`${API_URL}/me`, { 
+          credentials: 'include'
+        })
+        
+        if (!res.ok) throw new Error('Session invalid')
+
+        const data = await res.json()
+        
+        commit('UPDATE_CUSTOMER', data)
+        commit('LOGIN')
+        
+        // 如果有購物車，順便設定 ID
+        if (data.id) {
+          dispatch('cart/setUserId', data.id, { root: true })
+        }
+        return true
+      } catch (e) {
+        // 沒登入或 Cookie 過期，不做事，保持未登入狀態
+        console.log('User not logged in')
+        return false
+      }
+    },
+
     // 收藏店家
     async toggleFavorStore({ commit, state }, storeId) {
       const userId = state.customer.id
