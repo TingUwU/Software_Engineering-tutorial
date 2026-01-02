@@ -42,14 +42,6 @@ const router = createRouter({
 import store from '@/store'
 
 router.beforeEach((to, from, next) => {
-    // 1. 先從網址抓有沒有暗號 (Query Parameter)
-    const isOAuthLogin = to.query.oauth === 'true';
-    // 2. 檢查 Vuex 或 LocalStorage 有沒有使用者資料 (這是你原本的邏輯)
-    const isAuthenticated = sessionStorage.getItem('user');
-    if (isOAuthLogin) {
-        next(); 
-        return;
-    }
     const isLoggedIn = store.state.user.isLoggedIn || !!sessionStorage.getItem('user')
     const user = JSON.parse(sessionStorage.getItem('user'))
     
