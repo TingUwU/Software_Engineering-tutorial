@@ -58,6 +58,7 @@ export default {
     async register({ commit, dispatch }, registerData) {
       const res = await fetch(`${API_URL}/register`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(registerData)
       })
@@ -79,6 +80,7 @@ export default {
     async login({ commit, dispatch }, loginData) {
       const res = await fetch(`${API_URL}/login`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(loginData)
       })
@@ -102,7 +104,9 @@ export default {
     },
 
     async getUserProfile({ commit }, userId) {
-      const res = await fetch(`${API_URL}/${userId}`)
+      const res = await fetch(`${API_URL}/${userId}`, {
+        credentials: 'include'
+      })
       if (!res.ok) throw new Error('取得使用者資料失敗')
       const data = await res.json()
       commit('UPDATE_CUSTOMER', data)
@@ -113,6 +117,7 @@ export default {
       console.log('Sending PATCH to:', `${API_URL}/${userId}`, updates);
       const res = await fetch(`${API_URL}/${userId}`, {
         method: 'PATCH',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updates)
       });
@@ -141,7 +146,7 @@ export default {
       const url = `${API_URL}/${userId}/favorite-stores/${storeId}`
       console.log('Request URL:', url, 'Method:', exists ? 'DELETE' : 'POST')
       
-      const res = await fetch(url, { method: exists ? 'DELETE' : 'POST' })
+      const res = await fetch(url, { method: exists ? 'DELETE' : 'POST' , credentials: 'include'})
       console.log('Response status:', res.status)
       
       if (!res.ok) {
@@ -169,7 +174,7 @@ export default {
       const url = `${API_URL}/${userId}/favorite-items/${storeId}/${itemId}`
       console.log('Request URL:', url, 'Method:', exists ? 'DELETE' : 'POST')
       
-      const res = await fetch(url, { method: exists ? 'DELETE' : 'POST' })
+      const res = await fetch(url, { method: exists ? 'DELETE' : 'POST', credentials: 'include' })
       console.log('Response status:', res.status)
       
       if (!res.ok) {
@@ -189,6 +194,7 @@ export default {
       const userId = state.customer.id
       const res = await fetch(`${API_URL}/${userId}/custom-combos`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ comboName })
       })
@@ -205,6 +211,7 @@ export default {
       const userId = state.customer.id
       const res = await fetch(`${API_URL}/${userId}/custom-combos/${comboId}`, {
         method: 'PATCH',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ comboName })
       })
@@ -219,7 +226,7 @@ export default {
 
     async deleteCustomCombo({ commit, state }, comboId) {
       const userId = state.customer.id
-      const res = await fetch(`${API_URL}/${userId}/custom-combos/${comboId}`, { method: 'DELETE' })
+      const res = await fetch(`${API_URL}/${userId}/custom-combos/${comboId}`, { method: 'DELETE', credentials: 'include' })
       if (!res.ok) throw new Error('刪除失敗')
       const data = await res.json()
       commit('UPDATE_CUSTOMER', data)
@@ -230,6 +237,7 @@ export default {
       const userId = state.customer.id
       const res = await fetch(`${API_URL}/${userId}/custom-combos/${comboId}/items/${storeId}/${itemId}`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ customizations, quantity })
       })
@@ -245,7 +253,8 @@ export default {
     async deleteCustomComboItem({ commit, state }, { comboId, storeId, itemId }) {
       const userId = state.customer.id
       const res = await fetch(`${API_URL}/${userId}/custom-combos/${comboId}/items/${storeId}/${itemId}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        credentials: 'include'
       })
       if (!res.ok) {
         const err = await res.json()
@@ -258,7 +267,9 @@ export default {
 
     async getCustomCombos({ commit, state }) {
       const userId = state.customer.id
-      const res = await fetch(`${API_URL}/${userId}/custom-combos`)
+      const res = await fetch(`${API_URL}/${userId}/custom-combos`, {
+        credentials: 'include'
+      })
       if (!res.ok) throw new Error('取得自訂組合失敗')
       const data = await res.json()
       commit('UPDATE_CUSTOMER', { customCombos: data })
@@ -267,7 +278,9 @@ export default {
 
     async getCustomComboDetail({ state }, comboId) {
       const userId = state.customer.id
-      const res = await fetch(`${API_URL}/${userId}/custom-combos/${comboId}`)
+      const res = await fetch(`${API_URL}/${userId}/custom-combos/${comboId}`, {
+        credentials: 'include'
+      })
       if (!res.ok) throw new Error('取得組合詳細資訊失敗')
       return await res.json()
     },
@@ -276,6 +289,7 @@ export default {
       const userId = state.customer.id
       const res = await fetch(`${API_URL}/${userId}/custom-combos/${comboId}/items/${storeId}/${itemId}`, {
         method: 'PATCH',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updates)
       })

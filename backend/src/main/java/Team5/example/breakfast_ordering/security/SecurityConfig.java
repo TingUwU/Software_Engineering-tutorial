@@ -33,6 +33,9 @@ public class SecurityConfig {
                 )
                 // 登入成功後跳轉的網址
                 .defaultSuccessUrl("https://breakfast-frontend.onrender.com/home", true) 
+            )
+            .sessionManagement(session -> session
+                .sessionFixation().migrateSession() // 登入後換一個新的 Session ID 預防攻擊
             );
         
         return http.build();
