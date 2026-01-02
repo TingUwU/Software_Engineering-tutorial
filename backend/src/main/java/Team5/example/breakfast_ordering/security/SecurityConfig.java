@@ -26,7 +26,7 @@ public class SecurityConfig {
                     .userService(customOAuth2UserService)
                 )
                 // 登入成功後跳轉的網址
-                .defaultSuccessUrl("https://breakfast-frontend.onrender.com/home", true) 
+                .defaultSuccessUrl("https://breakfast-frontend.onrender.com/home?oauth=true", true) 
             );
         
         return http.build();
