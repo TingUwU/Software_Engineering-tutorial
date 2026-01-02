@@ -41,20 +41,21 @@ const router = createRouter({
 // 導航守衛：未登入就導向 login
 import store from '@/store'
 
-// router.beforeEach((to, from, next) => {
-//     const isLoggedIn = store.state.user.isLoggedIn || !!sessionStorage.getItem('user')
-//     const user = JSON.parse(sessionStorage.getItem('user'))
+router.beforeEach((to, from, next) => {
+    next()
+    // const isLoggedIn = store.state.user.isLoggedIn || !!sessionStorage.getItem('user')
+    // const user = JSON.parse(sessionStorage.getItem('user'))
     
-//     if (to.meta.requiresAuth && !isLoggedIn) {
-//         next('/login')  // 需要登入但未登入 → 導向 /login
-//     } else if (to.path === '/login' && isLoggedIn&&user.role === 'buyer') {
-//         next('/home')   
-//     } else if (to.path === '/login' && isLoggedIn&&user.role === 'owner') {
-//         next('/store-management')   
-//     } else {
-//         next()
-//     }
-// })
+    // if (to.meta.requiresAuth && !isLoggedIn) {
+    //     next('/login')  // 需要登入但未登入 → 導向 /login
+    // } else if (to.path === '/login' && isLoggedIn&&user.role === 'buyer') {
+    //     next('/home')   
+    // } else if (to.path === '/login' && isLoggedIn&&user.role === 'owner') {
+    //     next('/store-management')   
+    // } else {
+    //     next()
+    // }
+})
 
 
 
