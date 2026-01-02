@@ -127,14 +127,22 @@ const skipLogin = () => {
 }
 
 const loginWithGoogle = () => {
-  // Google 登入功能（未實作）
-  alert('未實作')
+  window.location.href = 'https://breakfast-team5.onrender.com/oauth2/authorization/google'
 }
 
 const loginWithFacebook = () => {
-  // Facebook 登入功能（未實作）
-  alert('未實作')
+  window.location.href = 'https://breakfast-team5.onrender.com/oauth2/authorization/facebook'
 }
+
+// const loginWithGoogle = () => {
+//   // Google 登入功能（未實作）
+//   alert('未實作')
+// }
+
+// const loginWithFacebook = () => {
+//   // Facebook 登入功能（未實作）
+//   alert('未實作')
+// }
 
 const forgetPassword = () => {
   // 忘記密碼功能（未實作）
