@@ -39,7 +39,7 @@ const router = createRouter({
 })
 
 // 導航守衛：未登入就導向 login
-import store from '@/store'
+// import store from '@/store'
 
 router.beforeEach((to, from, next) => {
     console.log(`Navigating to ${to.path} from ${from.path}`)
