@@ -200,6 +200,39 @@
         },
         
         async mounted() {
+
+            // 1. 處理 Google/FB 登入回來的邏輯
+            if (this.$route.query.oauth === 'true') {
+                console.log('偵測到 OAuth 登入跳轉，正在同步使用者資料...');
+                try {
+                    // 注意：你的後端必須要有這個 API (例如 /api/users/me)
+                    // 用來回傳目前登入的使用者是誰
+                    const res = await fetch('https://breakfast-team5.onrender.com/api/users/me', {
+                        credentials: 'include' // 重要：讓瀏覽器帶上 Cookie
+                    });
+
+                    if (res.ok) {
+                        const userData = await res.json();
+                        console.log('使用者資料同步成功:', userData);
+
+                        // 更新 Vuex
+                        this.$store.commit('user/UPDATE_CUSTOMER', userData);
+                        this.$store.commit('user/LOGIN');
+                        
+                        // 更新 LocalStorage 防止重新整理後消失
+                        sessionStorage.setItem('user', JSON.stringify(userData));
+
+                        // 拿掉網址上的 ?oauth=true 讓網址變乾淨
+                        this.$router.replace('/home');
+                    } else {
+                        console.warn('無法取得 OAuth 使用者資料，可能是 Session 過期');
+                    }
+                } catch (e) {
+                    console.error('OAuth 資料同步錯誤:', e);
+                }
+            }
+
+
             // 從後端載入所有店家（只有在沒有數據時才載入）
             try {
                 const existingShops = this.$store.getters['shops/allShops'];
