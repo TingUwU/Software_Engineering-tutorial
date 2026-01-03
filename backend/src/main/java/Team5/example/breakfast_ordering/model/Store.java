@@ -22,7 +22,7 @@ public class Store {
     private String category;
     private List<Double> coordinates;
     private List<BusinessHour> businessHours;
-    private boolean isActive;
+    private Boolean isActive;
     private String updatedAt;
     private String ownerId;
     private String avatar; // 商家頭貼
@@ -56,8 +56,8 @@ public class Store {
     public List<BusinessHour> getBusinessHours() { return businessHours; }
     public void setBusinessHours(List<BusinessHour> businessHours) { this.businessHours = businessHours; }
 
-    public boolean isActive() { return isActive; }
-    public void setActive(boolean active) { isActive = active; }
+    public Boolean getIsActive() { return isActive; }
+    public void setIsActive(Boolean active) { isActive = active; }
 
     public String getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(String updatedAt) { this.updatedAt = updatedAt; }

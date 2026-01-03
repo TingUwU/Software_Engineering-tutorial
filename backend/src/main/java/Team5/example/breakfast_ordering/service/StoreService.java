@@ -36,7 +36,7 @@ public class StoreService {
         }
         store.setOwnerId(ownerId);
         store.setUpdatedAt(Instant.now().toString());
-        store.setActive(true);
+        store.setIsActive(true);
         return storeRepository.save(store);
     }
 
@@ -71,7 +71,9 @@ public class StoreService {
         if (updatedStore.getBusinessHours() != null) store.setBusinessHours(updatedStore.getBusinessHours());
 
         // 更新狀態
-        store.setActive(updatedStore.isActive());
+        if (updatedStore.getIsActive() != null) {
+            store.setIsActive(updatedStore.getIsActive());
+        }
 
         // 保留原有菜單和分類（因為前端表單不編輯這些字段）
         // store.setMenu(store.getMenu()); // 已經是原有的，不需要重新設置
