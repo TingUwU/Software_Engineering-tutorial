@@ -54,7 +54,7 @@ public class SecurityConfig {
         configuration.setAllowedOrigins(List.of("https://breakfast-frontend.onrender.com"));
         
         // 允許的方法
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         
         // 允許的標頭
         configuration.setAllowedHeaders(List.of("*"));
