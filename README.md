@@ -1,13 +1,15 @@
-## 需求文件：https://hackmd.io/@Software-Engineering-team5/SysAi3Upge
-## 設計文件：https://hackmd.io/@Software-Engineering-team5/rk3ua3-WWl
-## 測試文件：https://hackmd.io/@Software-Engineering-team5/r1JSXlmQ-e
-## Demo 影片：https://www.youtube.com/watch?v=6uuuUWWm84k&feature=youtu.be
-## Trello：https://trello.com/b/i1pOlvNH/my-trello-board
+# 專案文件與資源索引
 
+* **需求文件**：[HackMD Link](https://hackmd.io/@Software-Engineering-team5/SysAi3Upge)
+* **設計文件**：[HackMD Link](https://hackmd.io/@Software-Engineering-team5/rk3ua3-WWl)
+* **測試文件**：[HackMD Link](https://hackmd.io/@Software-Engineering-team5/r1JSXlmQ-e)
+* **Demo 影片**：[YouTube Link](https://www.youtube.com/watch?v=6uuuUWWm84k&feature=youtu.be)
+* **Trello 看板**：[Trello Link](https://trello.com/b/i1pOlvNH/my-trello-board)
+* **Git Repository**：[GitHub Link](https://github.com/TingUwU/Software_Engineering-tutorial)
 
-## Git repo：https://github.com/TingUwU/Software_Engineering-tutorial
+---
 
-## 流程品質提升措施 (Process Quality Improvement Measures)
+## (6) 流程品質提升措施 (Process Quality Improvement Measures)
 
 本專案導入現代化開發流程、容器化技術與嚴謹的架構設計，以降低人為錯誤、提升協作效率並確保系統穩定性。
 
@@ -36,7 +38,7 @@
 
 ---
 
-## 其他有助於說明專案優點或貢獻的說明
+## (7) 其他有助於說明專案優點或貢獻的說明
 
 ### 1. 前後端分離與 API 優先策略 (API-First & Decoupled Architecture)
 * **API 優先 (API First)**：
@@ -58,3 +60,28 @@
     * 針對 404 或未預期的錯誤進行路由重寫 (Rewrite Rules)，引導使用者回到正確頁面（如首頁），避免出現服務中斷的困惑感。
 * **響應式設計 (Responsive Design)**：
     * 前端介面針對不同螢幕尺寸進行適配，無論是手機、平板或電腦，使用者皆能順暢地瀏覽菜單與進行點餐。
+
+### 4. 非功能需求驗證 (Non-functional Requirements Verification)
+針對系統的穩定性、效能與安全性，我們進行了以下實測與驗證：
+
+#### (1) 系統高併發穩定性測試 (PR-001)
+* **測試目標**：系統保證 100 人以下活動正常運作。
+* **測試結果**：
+    ![測試 PR-001](image-2.png)
+    * 系統經過 100 次連續請求測試（Iterations: 100），運作正常，所有請求皆成功回應 (Pass)。
+
+#### (2) 系統回應效能測試 (PR-002)
+* **測試目標**：系統所有功能的響應在 5 秒內回應。
+* **測試結果**：
+    ![測試 PR-002](image.png)
+    * 經 Chrome DevTools 網路效能分析，主要 API 回應時間皆在 **200ms ~ 990ms** 之間，遠低於系統需求定義的 5 秒限制，符合 PR-002 效能需求。
+    * **數據細節**：
+        * `me` (取得使用者資料)：**190 ms** (約 0.19 秒)
+        * 店家詳細資料 (長字串 ID)：**518 ms** (約 0.51 秒)
+        * `items` (獲取菜單)：**990 ms** (約 0.99 秒)
+
+#### (3) 傳輸安全性驗證 (PR-003)
+* **測試目標**：使用 SSL 憑證。
+* **測試結果**：
+    ![測試 PR-003](image-1.png)
+    * Render 平台自動提供 SSL/TLS 憑證，瀏覽器顯示鎖頭且網址為 HTTPS，確保資料傳輸加密，符合資安需求。
