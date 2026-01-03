@@ -198,7 +198,9 @@ export default {
 
                 console.log('正在載入店家資料，用戶ID:', userId);
                 
-                const res = await fetch('https://breakfast-team5.onrender.com/api/stores');
+                const res = await fetch('https://breakfast-team5.onrender.com/api/stores', {
+                    credentials: 'include'
+                });
                 if (!res.ok) {
                     throw new Error(`HTTP ${res.status}: 無法取得店家列表`);
                 }
@@ -351,6 +353,7 @@ export default {
                 // 發送到後端
                 const res = await fetch(`https://breakfast-team5.onrender.com/api/stores/${this.storeId}/menu`, {
                     method: 'PUT',
+                    credentials: 'include',
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${this.customer.id}`
@@ -396,6 +399,7 @@ export default {
                 // 發送到後端
                 const res = await fetch(`https://breakfast-team5.onrender.com/api/stores/${this.storeId}/menu`, {
                     method: 'PUT',
+                    credentials: 'include',
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${this.customer.id}`

@@ -134,6 +134,7 @@
         try {
             const response = await fetch('https://breakfast-team5.onrender.com/api/users/register', {
                 method: 'POST',
+                credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(registerData)
             })

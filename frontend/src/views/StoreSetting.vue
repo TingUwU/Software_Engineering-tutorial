@@ -192,7 +192,9 @@ onMounted(async () => {
   } else {
     // 如果沒有 id 參數，嘗試載入用戶現有的店家（如果有的話）
     try {
-      const res = await fetch('https://breakfast-team5.onrender.com/api/stores');
+      const res = await fetch('https://breakfast-team5.onrender.com/api/stores', {
+        credentials: 'include'
+      });
       if (res.ok) {
         const stores = await res.json();
         const myStore = stores.find(s => s.ownerId === userId);

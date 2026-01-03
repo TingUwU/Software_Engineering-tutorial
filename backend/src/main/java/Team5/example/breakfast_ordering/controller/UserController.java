@@ -130,6 +130,8 @@ public class UserController {
                 // 抓大頭貼
                 String picture = oauth2User.getAttribute("picture");
                 user.setPhoto(picture);
+
+                
             } else {
                 // 如果抓不到，就用預設值
                 user.setNickname("Google User");
