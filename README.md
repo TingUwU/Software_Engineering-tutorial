@@ -67,13 +67,13 @@
 #### (1) 系統高併發穩定性測試 (PR-001)
 * **測試目標**：系統保證 100 人以下活動正常運作。
 * **測試結果**：
-    ![測試 PR-001](image-2.png)
+    <img width="1057" height="852" alt="image" src="https://github.com/user-attachments/assets/2d56becb-96ec-4692-9295-0727645ab300" />
     * 系統經過 100 次連續請求測試（Iterations: 100），運作正常，所有請求皆成功回應 (Pass)。
 
 #### (2) 系統回應效能測試 (PR-002)
 * **測試目標**：系統所有功能的響應在 5 秒內回應。
 * **測試結果**：
-    ![測試 PR-002](image.png)
+    <img width="1913" height="979" alt="image" src="https://github.com/user-attachments/assets/25e161f3-0070-4fd4-a429-720ab1d8fef5" />
     * 經 Chrome DevTools 網路效能分析，主要 API 回應時間皆在 **200ms ~ 990ms** 之間，遠低於系統需求定義的 5 秒限制，符合 PR-002 效能需求。
     * **數據細節**：
         * `me` (取得使用者資料)：**190 ms** (約 0.19 秒)
@@ -83,5 +83,5 @@
 #### (3) 傳輸安全性驗證 (PR-003)
 * **測試目標**：使用 SSL 憑證。
 * **測試結果**：
-    ![測試 PR-003](image-1.png)
+    <img width="1905" height="975" alt="image" src="https://github.com/user-attachments/assets/a42431b5-d015-482a-83a2-a8c6b875fb42" />
     * Render 平台自動提供 SSL/TLS 憑證，瀏覽器顯示鎖頭且網址為 HTTPS，確保資料傳輸加密，符合資安需求。
