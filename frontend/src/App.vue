@@ -36,6 +36,9 @@ export default {
     // WebSocket Client 變數
     let stompClient = null;
 
+    // 連線鎖，防止重複連線
+    let isConnecting = false;
+
     // 請求瀏覽器通知權限
     const requestNotificationPermission = () => {
       // 檢查瀏覽器是否支援且尚未授權
@@ -62,13 +65,17 @@ export default {
     const connectWebSocket = (userId) => {
       // 避免重複連線
       if (stompClient && stompClient.connected) return;
+      if (isConnecting) return;
 
       console.log('正在嘗試連線 WebSocket...');
+      isConnecting = true;
+
       const socket = new SockJS(`${API_DOMAIN}/ws`);
       stompClient = Stomp.over(socket);
 
       stompClient.connect({}, (frame) => {
         console.log('WebSocket 已連線: ' + frame);
+        isConnecting = false;
 
         // 訂閱該使用者的專屬頻道 (對應後端的 /topic/orders/{userId})
         stompClient.subscribe(`/topic/orders/${userId}`, (message) => {
@@ -77,6 +84,7 @@ export default {
         });
       }, (error) => {
         console.error('WebSocket 連線失敗:', error);
+        isConnecting = false;
       });
     };
 
@@ -108,10 +116,10 @@ export default {
         console.log('Session check successful.');
 
         // 如果恢復登入成功，連線 WebSocket
-        if (isLoggedIn.value && customer.value.id) {
-          requestNotificationPermission();
-          connectWebSocket(customer.value.id);
-        }
+        // if (isLoggedIn.value && customer.value.id) {
+        //   requestNotificationPermission();
+        //   connectWebSocket(customer.value.id);
+        // }
       } catch (err) {
         console.log('No active session found (User is guest).');
       }
