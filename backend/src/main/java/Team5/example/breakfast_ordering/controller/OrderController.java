@@ -3,6 +3,7 @@ package Team5.example.breakfast_ordering.controller;
 import Team5.example.breakfast_ordering.model.Order;
 import Team5.example.breakfast_ordering.service.OrderService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -15,6 +16,9 @@ public class OrderController {
 
     @Autowired
     private OrderService orderService;
+
+    @Autowired
+    private SimpMessagingTemplate messagingTemplate;  // 用來推播通知
 
     @PostMapping
     public Order createOrder(@RequestBody Order order) {
@@ -35,6 +39,15 @@ public class OrderController {
     @PatchMapping("/{id}")
     public Order updateOrderState(@PathVariable String id, @RequestBody Map<String, String> payload) {
         String newState = payload.get("state");
-        return orderService.updateOrderState(id, newState);
+        Order updatedOrder = orderService.updateOrderState(id, newState);
+
+        if("已完成".equals(newState)){
+            String customerId = updatedOrder.getCustomerId();
+            String message = "您的訂單 (編號: " + updatedOrder.getId().substring(0, 5) + ") 已經準備好，請前往取餐！";
+
+            messagingTemplate.convertAndSend("/topic/orders/" + customerId, message);
+        }
+
+        return updatedOrder;
     }
 }

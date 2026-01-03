@@ -14,9 +14,15 @@
 </template>
 
 <script>
-import { onMounted, computed } from 'vue';
+import { onMounted, computed, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useStore } from 'vuex';
+
+import SockJS from 'sockjs-client';
+import Stomp from 'stompjs';
+
+// 後端網址
+const API_DOMAIN = 'https://breakfast-team5.onrender.com';
 
 export default {
   setup() {
@@ -27,12 +33,85 @@ export default {
     const customer = computed(() => store.state.user.customer);
     const isLoggedIn = computed(() => store.state.user.customer.isLoggedIn);
 
+    // WebSocket Client 變數
+    let stompClient = null;
+
+    // 請求瀏覽器通知權限
+    const requestNotificationPermission = () => {
+      // 檢查瀏覽器是否支援且尚未授權
+      if ('Notification' in window && Notification.permission !== 'granted') {
+        Notification.requestPermission();
+      }
+    };
+
+    // 顯示推播通知的函式
+    const showNotification = (msg) => {
+      // 如果有權限，跳出原生通知
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification('早一點 - 餐點通知', {
+          body: msg,
+          icon: require('@/assets/logo.png')
+        });
+      } else {
+        // 如果使用者沒開權限，用 alert 替代
+        alert(`【餐點通知】\n${msg}`);
+      }
+    };
+
+    // -連線 WebSocket
+    const connectWebSocket = (userId) => {
+      // 避免重複連線
+      if (stompClient && stompClient.connected) return;
+
+      console.log('正在嘗試連線 WebSocket...');
+      const socket = new SockJS(`${API_DOMAIN}/ws`);
+      stompClient = Stomp.over(socket);
+
+      stompClient.connect({}, (frame) => {
+        console.log('WebSocket 已連線: ' + frame);
+
+        // 訂閱該使用者的專屬頻道 (對應後端的 /topic/orders/{userId})
+        stompClient.subscribe(`/topic/orders/${userId}`, (message) => {
+          console.log('收到推播訊息:', message.body);
+          showNotification(message.body);
+        });
+      }, (error) => {
+        console.error('WebSocket 連線失敗:', error);
+      });
+    };
+
+    // 斷線函式 (登出時用) 
+    const disconnectWebSocket = () => {
+      if (stompClient) {
+        stompClient.disconnect();
+        console.log('WebSocket 已斷線');
+      }
+    };
+
+    // 監聽登入狀態改變
+    // 當 isLoggedIn 變成 true (登入) -> 連線
+    // 當 isLoggedIn 變成 false (登出) -> 斷線
+    watch(isLoggedIn, (newVal) => {
+      if (newVal && customer.value.id) {
+        requestNotificationPermission();
+        connectWebSocket(customer.value.id);
+      } else {
+        disconnectWebSocket();
+      }
+    });
+
     onMounted(async () => {
       console.log('App mounted. Checking authentication status...');
       
       try {
         await store.dispatch('user/checkAuth');
         console.log('Session check successful.');
+
+        // 如果恢復登入成功，連線 WebSocket
+        if (isLoggedIn.value && customer.value.id) {
+          requestNotificationPermission();
+          connectWebSocket(customer.value.id);
+        }
       } catch (err) {
         console.log('No active session found (User is guest).');
       }
