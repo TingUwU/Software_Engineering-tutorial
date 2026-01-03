@@ -49,8 +49,8 @@ export default {
       // 如果有權限，跳出原生通知
       if ('Notification' in window && Notification.permission === 'granted') {
         new Notification('早一點 - 餐點通知', {
-          body: msg,
-          icon: require('@/assets/logo.png')
+          body: msg
+          // icon: require('@/assets/logo.png')
         });
       } else {
         // 如果使用者沒開權限，用 alert 替代
