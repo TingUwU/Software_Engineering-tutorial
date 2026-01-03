@@ -28,7 +28,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers("/api/users/login", "/api/users/register").permitAll()
-                .requestMatchers("/", "/index.html", "/css/**", "/js/**", "/assets/**", "/error", "/auth/**", "/oauth2/**", "/ws/**").permitAll()  // 設定哪些 API 不需要憑證
+                .requestMatchers("/", "/index.html", "/css/**", "/js/**", "/api/**", "/assets/**", "/error", "/auth/**", "/oauth2/**", "/ws/**").permitAll()  // 設定哪些 API 不需要憑證
                 .anyRequest().authenticated()
             )
             .oauth2Login(oauth2 -> oauth2
