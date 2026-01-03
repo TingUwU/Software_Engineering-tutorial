@@ -389,7 +389,7 @@ const checkout = async () => {
 
   let checkDate = new Date()
   if(orderType.value === '外帶'){
-    const [hours, minutes] = takeoutTime.value.split(':').map(Numebr)
+    const [hours, minutes] = takeoutTime.value.split(':').map(Number)
     checkDate.setHours(hours, minutes, 0, 0)
 
     const now = new Date()
