@@ -9,7 +9,7 @@
 
 ---
 
-## (6) 流程品質提升措施 (Process Quality Improvement Measures)
+## 流程品質提升措施 (Process Quality Improvement Measures)
 
 本專案導入現代化開發流程、容器化技術與嚴謹的架構設計，以降低人為錯誤、提升協作效率並確保系統穩定性。
 
@@ -38,7 +38,7 @@
 
 ---
 
-## (7) 其他有助於說明專案優點或貢獻的說明
+## 其他有助於說明專案優點或貢獻的說明
 
 ### 1. 前後端分離與 API 優先策略 (API-First & Decoupled Architecture)
 * **API 優先 (API First)**：
@@ -79,9 +79,18 @@
         * `me` (取得使用者資料)：**190 ms** (約 0.19 秒)
         * 店家詳細資料 (長字串 ID)：**518 ms** (約 0.51 秒)
         * `items` (獲取菜單)：**990 ms** (約 0.99 秒)
+     
+
 
 #### (3) 傳輸安全性驗證 (PR-003)
 * **測試目標**：使用 SSL 憑證。
 * **測試結果**：
     <img width="1905" height="975" alt="image" src="https://github.com/user-attachments/assets/a42431b5-d015-482a-83a2-a8c6b875fb42" />
     * Render 平台自動提供 SSL/TLS 憑證，瀏覽器顯示鎖頭且網址為 HTTPS，確保資料傳輸加密，符合資安需求。
+---
+
+## 測試帳號(商家)
+* 帳號：testUser2
+* 密碼：password2
+* 身分：owner
+* 備註：登入後請確認右上角暱稱顯示為「我是測試人員2號」
