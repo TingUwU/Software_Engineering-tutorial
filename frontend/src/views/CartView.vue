@@ -709,6 +709,7 @@ const checkout = async () => {
 
 .quantity-row input[type=number] {
   -moz-appearance: textfield; /* Firefox */
+  appearance: textfield;
   text-align: center;
   width: 50px;
   border: 2px solid #0069D9;
