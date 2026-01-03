@@ -385,7 +385,7 @@ const checkout = async () => {
   // 再次確認
   if (!currentStore.value) return alert('店家資料讀取錯誤')
 
-  if (!currentStore.value.isActive) return alert('店家目前已關閉，無法接單')
+  if (!currentStore.value.active) return alert('店家目前已關閉，無法接單')
 
   let checkDate = new Date()
   if(orderType.value === '外帶'){
