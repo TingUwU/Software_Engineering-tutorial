@@ -3,6 +3,7 @@ package Team5.example.breakfast_ordering.security;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -25,6 +26,7 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable()) 
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .authorizeHttpRequests(auth -> auth
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers("/api/users/login", "/api/users/register").permitAll()
                 .requestMatchers("/", "/index.html", "/css/**", "/js/**", "/assets/**", "/error", "/auth/**", "/oauth2/**").permitAll()  // 設定哪些 API 不需要憑證
                 .anyRequest().authenticated()
