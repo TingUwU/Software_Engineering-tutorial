@@ -173,6 +173,12 @@ const takeoutTime = ref(null)
 const customerPhone = ref('')
 const paymentMethod = ref('')
 
+const currentStore = computed(() => {
+  const storeId = store.state.cart.storeId
+  if(!storeId) return null
+  return store.getters['shops/getShopById'](storeId)
+})
+
 // Cart computed
 const cart = computed(() => {
   const items = (store.state.cart.items || []).map(item => {
@@ -197,6 +203,33 @@ const cart = computed(() => {
 })
 
 const customer = computed(() => store.getters['user/customer'] || {})
+
+const isStoreOpen = (storeData, dateToCheck) => {
+  if (!storeData || !storeData.businessHours || storeData.businessHours.length === 0){
+    return false
+  }
+
+  const daysMap = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
+  const currentDayStr = daysMap[dateToCheck.getDay()]
+  const todayRule = storeData.businessHours.find(
+    h => h.day === currentDayStr
+  )
+
+  if (!todayRule || !todayRule.start || !todayRule.end){
+    return false
+  }
+
+  const getMinutes = (timeStr) => {
+    const [h, m] = timeStr.split(':').map(Number)
+    return h * 60 + m
+  }
+
+  const checkTimeMinutes = dateToCheck.getHours() * 60 + dateToCheck.getMinutes()
+  const startMinutes = getMinutes(todayRule.start)
+  const endMinutes = getMinutes(todayRule.end)
+
+  return checkTimeMinutes >= startMinutes && checkTimeMinutes <= endMinutes
+}
 
 onMounted(async () => {
   const userId = customer.value.id
@@ -306,9 +339,6 @@ const decreaseQuantity = async (index) => {
   }
 }
 
-
-
-
 const updateUserInfo = async () => {
   try {
     // 驗證電子郵件格式
@@ -343,13 +373,45 @@ const checkout = async () => {
     return alert('請選擇付款方式')
   }
 
+  if (!currentStore.value){
+    try{
+      await store.dispatch('shops/fetchShopById', store.state.cart.storeId)
+    }
+    catch (e){
+      return alert('無法讀取店家頁面，請重新整理頁面')
+    }
+  }
+
+  // 再次確認
+  if (!currentStore.value) return alert('店家資料讀取錯誤')
+
+  if (!currentStore.value.isActive) return alert('店家目前已關閉，無法接單')
+
+  let checkDate = new Date()
+  if(orderType.value === '外帶'){
+    const [hours, minutes] = takeoutTime.value.split(':').map(Numebr)
+    checkDate.setHours(hours, minutes, 0, 0)
+
+    const now = new Date()
+    if (checkDate < new Date(now.getTime() - 10 * 60000)){
+      alert('取餐時間不能早於現在時間')
+    }
+  }
+
+  const isOpen = isStoreOpen(currentStore.value, checkDate)
+
+  if (!isOpen) {
+    if (orderType.value === '外帶') {
+      return alert(`您選擇的取餐時間 (${takeoutTime.value}) 非該店營業時間！`)
+    } else {
+      return alert('目前非營業時間，無法送出訂單！')
+    }
+  }
+
   // 轉換時間格式：將 "HH:MM" 轉換為當天該時間的 ISO 字符串
   let takeoutDetailData = null;
   if (orderType.value === '外帶') {
-    const today = new Date();
-    const [hours, minutes] = takeoutTime.value.split(':');
-    today.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-    takeoutDetailData = { takeoutTime: today.toISOString() };
+    takeoutDetailData = { takeoutTime: checkDate.toISOString() };
   }
 
   const orderData = {
